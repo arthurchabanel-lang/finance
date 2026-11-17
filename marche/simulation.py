@@ -1,4 +1,14 @@
-"""Le marché : relie le carnet d'ordres, les agents et la valeur fondamentale."""
+"""Le marché : relie le carnet d'ordres, les agents et la valeur fondamentale.
+
+Mécanismes (voir config.toml) :
+- attention des chartistes, répartis en groupes d'horizons différents (court, moyen,
+  long terme) et plus sensibles aux baisses qu'aux hausses (aversion aux pertes) ;
+- réactivité des fondamentalistes à l'écart de valorisation ;
+- appels de marge : un fonds dont le capital recule trop par rapport à son plus haut
+  doit couper sa position au marché, puis reste suspendu un moment ;
+- régulations optionnelles : taxe sur les transactions, coupe-circuit,
+  interdiction de la vente à découvert.
+"""
 
 from __future__ import annotations
 
@@ -8,7 +18,17 @@ from collections import defaultdict
 import numpy as np
 
 from .agents import TYPES_AGENTS, Agent, TeneurDeMarche
-from .carnet import ACHAT, CarnetOrdres, Transaction
+from .carnet import ACHAT, VENTE, CarnetOrdres, Transaction
+
+REGULATION_PAR_DEFAUT = {
+    "taxe_transaction": 0.0,          # ex. 0.001 = 0,1 % payé par chaque partie
+    "sensibilite_bruiteurs": 0.001,   # coût qui divise par e l'activité des bruiteurs
+    "coupe_circuit_seuil": 0.0,       # ex. 0.05 : arrêt si le prix bouge de 5 %...
+    "coupe_circuit_fenetre": 200,     # ... sur cette fenêtre (pas)
+    "coupe_circuit_duree": 100,       # durée de l'arrêt (pas)
+    "interdiction_vente_decouvert": False,
+}
+MARGE_PAR_DEFAUT = {"actif": False}
 
 
 class Marche:
@@ -24,9 +44,21 @@ class Marche:
         self.fenetre_vol = cm["fenetre_volatilite"]
         self.bande_prix = cm["bande_prix"]
         self._vol_cache: tuple[int, float] = (-1, 0.0)
-        # Volatilité « normale » de long terme (moyenne mobile exponentielle des r²)
-        self._alpha_vol = 1.0 - 0.5 ** (1.0 / cm["memoire_volatilite"])
-        self._var_longue: float | None = None
+
+        # Volatilités moyennes mobiles exponentielles (EMA des r²) : une de référence
+        # (long terme) et une par horizon d'attention des chartistes.
+        self._demi_vie_ref = cm["memoire_volatilite"]
+        pc = config["agents"]["chartistes"]
+        self.horizons = list(pc.get("horizons_attention", [cm["fenetre_volatilite"]]))
+        self._var: dict[int, float | None] = {h: None for h in [self._demi_vie_ref, *self.horizons]}
+        self._ema_r: dict[int, float] = {h: 0.0 for h in self.horizons}  # tendance par horizon
+
+        # Régulation
+        self.reg = {**REGULATION_PAR_DEFAUT, **config.get("regulation", {})}
+        self.taxe = self.reg["taxe_transaction"]
+        self.zone_morte = 2.0 * self.taxe  # un trade doit rapporter plus que l'aller-retour
+        self.arret_jusqua = -1
+        self.marge = {**MARGE_PAR_DEFAUT, **config.get("marge", {})}
 
         # Historique (une valeur par pas de temps)
         self.hist_prix: list[float] = [self.dernier_prix]
@@ -35,9 +67,13 @@ class Marche:
         self.hist_volume: list[int] = [0]
         self.hist_attention: list[float] = [1.0]
         self.hist_news: list[tuple[int, float]] = []
+        self.hist_appels: list[tuple[int, int]] = []     # (pas, nombre d'appels de marge)
+        self.hist_arrets: list[int] = []                 # pas où un coupe-circuit se déclenche
         self.hist_richesse: dict[str, list[float]] = defaultdict(list)
         self.hist_richesse_t: list[int] = []
+        self.taxes_collectees = 0.0
         self._volume_pas = 0
+        self.scenario: dict | None = None
 
         self._creer_agents(config)
 
@@ -51,12 +87,28 @@ class Marche:
                 agent = classe(len(self.agents), cash=cm["cash_initial"],
                                actions=cm["actions_initiales"],
                                credit_max=cm["credit_max"], rng=self.rng, p=p)
+                agent.plus_haut = agent.richesse(cm["prix_initial"])
+                if self.reg["interdiction_vente_decouvert"] and not isinstance(agent, TeneurDeMarche):
+                    agent.plancher_reglementaire = 0
                 self.agents.append(agent)
         self.teneurs = [a for a in self.agents if isinstance(a, TeneurDeMarche)]
         self.traders = [a for a in self.agents if not isinstance(a, TeneurDeMarche)]
         self.groupes = {cle: [a for a in self.traders if isinstance(a, classe)]
                         for cle, classe in TYPES_AGENTS.items() if classe is not TeneurDeMarche}
+        chartistes = self.groupes.pop("chartistes")
+        for i, a in enumerate(chartistes):
+            a.horizon = i % len(self.horizons)
+        self.groupes_chartistes = [[a for a in chartistes if a.horizon == k]
+                                   for k in range(len(self.horizons))]
+        self.soumis_marge = [a for a in self.traders
+                             if a.type_nom in self.marge.get("types", [])] if self.marge["actif"] else []
         self.types = list(dict.fromkeys(a.type_nom for a in self.agents))
+
+    def ajouter_agent(self, agent: Agent) -> Agent:
+        """Ajoute un acteur extérieur (scénarios, fonds multi-actifs) hors des groupes."""
+        agent.id = len(self.agents)
+        self.agents.append(agent)
+        return agent
 
     # ---------------------------------------------- informations pour agents
     def prix_reference(self) -> float:
@@ -81,18 +133,27 @@ class Marche:
         self._vol_cache = (self.t, vol)
         return vol
 
-    def stress(self) -> float:
-        """Volatilité récente rapportée à la volatilité normale (1 = marché calme habituel)."""
-        if not self._var_longue or self.t < 2 * self.fenetre_vol:
-            return 1.0
-        return self.volatilite_recente() / math.sqrt(self._var_longue)
+    def stress(self, horizon: int | None = None) -> float:
+        """Volatilité récente rapportée à la normale de long terme (1 = calme habituel).
 
-    def _maj_volatilite_longue(self) -> None:
-        r2 = math.log(self.hist_prix[-1] / self.hist_prix[-2]) ** 2
-        # Au démarrage : simple moyenne (pas d'historique), puis moyenne exponentielle.
-        alpha = max(self._alpha_vol, 1.0 / self.t)
-        self._var_longue = r2 if self._var_longue is None else \
-            self._var_longue + alpha * (r2 - self._var_longue)
+        Sans horizon : fenêtre glissante courte (affichage, régime de marché).
+        Avec horizon : volatilité EMA de cette demi-vie (attention des chartistes).
+        """
+        ref = self._var[self._demi_vie_ref]
+        if not ref or self.t < 2 * self.fenetre_vol:
+            return 1.0
+        if horizon is None:
+            return self.volatilite_recente() / math.sqrt(ref)
+        return math.sqrt(self._var[horizon] / ref)
+
+    def _maj_volatilites(self) -> None:
+        r = math.log(self.hist_prix[-1] / self.hist_prix[-2])
+        for h, v in self._var.items():
+            # Au démarrage : simple moyenne (pas d'historique), puis moyenne exponentielle.
+            alpha = max(1.0 - 0.5 ** (1.0 / h), 1.0 / self.t)
+            self._var[h] = r * r if v is None else v + alpha * (r * r - v)
+            if h in self._ema_r:
+                self._ema_r[h] += alpha * (r - self._ema_r[h])
 
     # ------------------------------------------------------ passage d'ordres
     def envoyer_limite(self, agent: Agent, cote: int, prix: float,
@@ -115,14 +176,16 @@ class Marche:
         self._regler(self.carnet.ordre_marche(agent.id, cote, quantite, self.t))
 
     def _regler(self, transactions: list[Transaction]) -> None:
-        """Règlement-livraison immédiat : cash contre titres."""
+        """Règlement-livraison immédiat : cash contre titres (moins la taxe éventuelle)."""
         for tr in transactions:
             montant = tr.prix * self.tick * tr.quantite
             acheteur, vendeur = self.agents[tr.acheteur], self.agents[tr.vendeur]
-            acheteur.cash -= montant
+            frais = self.taxe * montant
+            acheteur.cash -= montant + frais
             acheteur.actions += tr.quantite
-            vendeur.cash += montant
+            vendeur.cash += montant - frais
             vendeur.actions -= tr.quantite
+            self.taxes_collectees += 2 * frais
             self.dernier_prix = tr.prix * self.tick
             self._volume_pas += tr.quantite
 
@@ -136,40 +199,125 @@ class Marche:
             self.hist_news.append((self.t, news))
         self.valeur_fondamentale *= math.exp(choc)
 
+    def choc_fondamental(self, taille_log: float) -> None:
+        self.valeur_fondamentale *= math.exp(taille_log)
+
+    def lancer_scenario(self, agent: Agent, cote: int, total: int, par_pas: int = 40) -> None:
+        """Un acteur extérieur exécute un gros ordre au marché, par tranches."""
+        self.scenario = {"agent": agent, "cote": cote, "restant": total, "par_pas": par_pas}
+
+    def _appels_de_marge(self) -> None:
+        """Le courtier vérifie le capital de chaque fonds endetté."""
+        m = self.marge
+        prix = self.hist_prix[-1]
+        n = 0
+        # L'appétit pour le risque se reconstitue lentement après un désendettement.
+        rappel = 1.0 - 0.5 ** (m["frequence_controle"] / m["demi_vie_reprise"])
+        for a in self.soumis_marge:
+            a.neutre += rappel * (a.neutre_initial - a.neutre)
+            if a.a_liquider:
+                continue
+            capital = a.richesse(prix)
+            if capital > a.plus_haut:
+                a.plus_haut = capital
+            elif capital < a.plus_haut * (1.0 - m["seuil_perte"]) and a.actions != 0:
+                # Appel de marge : réduire l'exposition d'une fraction, au marché.
+                a.a_liquider = int(round(a.actions * m["reduction"]))
+                a.neutre = max(a.neutre - a.a_liquider, 0.0)  # le fonds réduit son exposition cible
+                a.annuler_tout(self)
+                n += 1
+        if n:
+            self.hist_appels.append((self.t, n))
+
+    def _liquidations(self) -> None:
+        """Exécute les ventes (ou rachats) forcés, par tranches, au marché."""
+        m = self.marge
+        for a in self.soumis_marge:
+            if not a.a_liquider:
+                continue
+            cote = VENTE if a.a_liquider > 0 else ACHAT
+            avant = a.actions
+            self.envoyer_marche(a, cote, min(abs(a.a_liquider), m["tranche_liquidation"]))
+            a.a_liquider += a.actions - avant  # se rapproche de 0 (reste si pas de contrepartie)
+            if a.a_liquider == 0:
+                a.suspendu_jusqua = self.t + int(self.rng.exponential(m["duree_suspension"]))
+                a.plus_haut = a.richesse(self.hist_prix[-1])
+
+    def _coupe_circuit(self) -> bool:
+        """Renvoie True si la cotation est suspendue à ce pas."""
+        if self.t < self.arret_jusqua:
+            return True
+        seuil, fen = self.reg["coupe_circuit_seuil"], self.reg["coupe_circuit_fenetre"]
+        if seuil > 0 and len(self.hist_prix) > fen and self.t >= self.arret_jusqua + fen:
+            if abs(math.log(self.hist_prix[-1] / self.hist_prix[-1 - fen])) > seuil:
+                self.arret_jusqua = self.t + self.reg["coupe_circuit_duree"]
+                self.hist_arrets.append(self.t)
+                for a in self.agents:
+                    a.annuler_tout(self)
+                return True
+        return False
+
+    def _intensite_chartistes(self, horizon: int) -> float:
+        pc = self.config["agents"]["chartistes"]
+        surchauffe = max(self.stress(horizon) - 1.0, 0.0)
+        if self._ema_r[horizon] < 0:  # le marché baisse : la peur amplifie l'attention
+            surchauffe *= 1.0 + pc.get("aversion_pertes", 0.0)
+        return min(1.0 + pc["attention"] * surchauffe, pc["attention_max"])
+
     def pas(self) -> None:
         self.t += 1
         self._volume_pas = 0
         self._evoluer_fondamental()
-
-        # Les teneurs de marché retirent d'abord toutes leurs cotations, puis lisent
-        # le carnet « réel » : sinon ils coteraient autour de leurs propres prix
-        # et se courraient après (dérive à cliquet).
-        for teneur in self.teneurs:
-            teneur.annuler_tout(self)
-        self.reference_teneurs = self.prix_reference()
-        for teneur in self.teneurs:
-            teneur.agir(self.t, self)
-
-        # Qui agit à ce pas ? Chaque type a sa fréquence propre ; les types dotés
-        # d'« attention » s'activent davantage quand le marché est agité.
-        stress = self.stress()
-        ecart = math.log(self.prix_reference() / self.valeur_fondamentale)
         multiplicateur = 1.0
-        actifs: list[Agent] = []
-        for cle, groupe in self.groupes.items():
-            p = self.config["agents"][cle]
-            intensite = p["activite"]
-            if p.get("attention", 0.0) > 0:
-                multiplicateur = min(1.0 + p["attention"] * max(stress - 1.0, 0.0),
-                                     p["attention_max"])
-                intensite *= multiplicateur
-            if p.get("reactivite_ecart", 0.0) > 0:
-                # Plus le titre est mal valorisé, plus les investisseurs « value » se ruent.
-                intensite *= 1.0 + p["reactivite_ecart"] * abs(ecart) / p["echelle_ecart"]
-            n = self.rng.poisson(intensite)
-            actifs.extend(groupe[i] for i in self.rng.integers(0, len(groupe), size=n))
-        for i in self.rng.permutation(len(actifs)):
-            actifs[i].agir(self.t, self)
+
+        if not self._coupe_circuit():
+            # Les teneurs de marché retirent d'abord toutes leurs cotations, puis lisent
+            # le carnet « réel » : sinon ils coteraient autour de leurs propres prix
+            # et se courraient après (dérive à cliquet).
+            for teneur in self.teneurs:
+                teneur.annuler_tout(self)
+            self.reference_teneurs = self.prix_reference()
+            for teneur in self.teneurs:
+                teneur.agir(self.t, self)
+
+            if self.scenario:
+                sc = self.scenario
+                q = min(sc["par_pas"], sc["restant"])
+                self.envoyer_marche(sc["agent"], sc["cote"], q)
+                sc["restant"] -= q
+                if sc["restant"] <= 0:
+                    self.scenario = None
+
+            if self.marge["actif"]:
+                self._liquidations()
+
+            # Qui agit à ce pas ? Chaque type a sa fréquence propre.
+            ecart = math.log(self.prix_reference() / self.valeur_fondamentale)
+            actifs: list[Agent] = []
+
+            def tirer(groupe: list[Agent], intensite: float) -> None:
+                n = self.rng.poisson(intensite)
+                actifs.extend(groupe[i] for i in self.rng.integers(0, len(groupe), size=n))
+
+            pf = self.config["agents"]["fondamentalistes"]
+            tirer(self.groupes["fondamentalistes"],
+                  pf["activite"] * (1.0 + pf["reactivite_ecart"] * abs(ecart) / pf["echelle_ecart"]))
+            pb = self.config["agents"]["bruiteurs"]
+            tirer(self.groupes["bruiteurs"],
+                  pb["activite"] * math.exp(-self.taxe / self.reg["sensibilite_bruiteurs"]))
+            pc = self.config["agents"]["chartistes"]
+            mults = []
+            for k, h in enumerate(self.horizons):
+                mult = self._intensite_chartistes(h)
+                mults.append(mult)
+                tirer(self.groupes_chartistes[k], pc["activite"] / len(self.horizons) * mult)
+            multiplicateur = float(np.mean(mults))
+
+            for i in self.rng.permutation(len(actifs)):
+                a = actifs[i]
+                if a.a_liquider or self.t < a.suspendu_jusqua:
+                    continue  # en cours de liquidation ou suspendu par son courtier
+                a.agir(self.t, self)
 
         bid = self.carnet.meilleur_achat(self.t)
         ask = self.carnet.meilleure_vente(self.t)
@@ -178,8 +326,10 @@ class Marche:
         self.hist_spread.append((ask.prix - bid.prix) * self.tick if bid and ask else math.nan)
         self.hist_volume.append(self._volume_pas)
         self.hist_attention.append(multiplicateur)
-        self._maj_volatilite_longue()
+        self._maj_volatilites()
 
+        if self.marge["actif"] and self.t % self.marge["frequence_controle"] == 0:
+            self._appels_de_marge()
         if self.t % self.config["marche"]["frequence_bilan"] == 0:
             self._bilan()
 

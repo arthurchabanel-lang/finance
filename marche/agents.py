@@ -34,11 +34,17 @@ class Agent:
         self.id = agent_id
         self.cash = float(cash)
         self.actions = int(actions)
-        self.neutre = int(actions)          # dotation de référence (benchmark)
+        self.neutre = float(actions)        # exposition de référence (benchmark)
+        self.neutre_initial = float(actions)
         self.position_max = p["position_max"]  # écart maximal au benchmark
         self.credit_max = credit_max        # découvert autorisé (achat sur marge)
+        self.plancher_reglementaire = -math.inf  # ex. 0 si vente à découvert interdite
         self.rng = rng
         self.ordres: list[int] = []
+        # Appels de marge : plus haut historique du capital, liquidation en cours, suspension
+        self.plus_haut = self.cash + self.actions * 100.0
+        self.a_liquider = 0
+        self.suspendu_jusqua = -1
 
     def richesse(self, prix: float) -> float:
         """Valorisation au prix de marché (mark-to-market)."""
@@ -52,8 +58,13 @@ class Agent:
                 pouvoir_achat = max(self.cash + self.credit_max, 0.0)
                 q = min(q, int(pouvoir_achat // max(prix, 1e-9)))
         else:
-            q = min(quantite, self.actions - (self.neutre - self.position_max))
+            q = min(quantite, self.actions - self.plancher)
         return max(int(q), 0)
+
+    @property
+    def plancher(self) -> float:
+        """Position minimale autorisée (vente à découvert bornée)."""
+        return max(self.neutre - self.position_max, self.plancher_reglementaire)
 
     def annuler_tout(self, marche: "Marche") -> None:
         for oid in self.ordres:
@@ -92,6 +103,8 @@ class Fondamentaliste(Agent):
         prix = marche.prix_reference()
         valeur = marche.valeur_fondamentale * math.exp(self.biais)
         ecart = math.log(valeur / prix)  # > 0 : sous-évalué
+        if abs(ecart) < marche.zone_morte:  # le gain espéré ne couvre pas les frais
+            return
         cote, quantite = self.viser(ecart / self.echelle)
         quantite = self.quantite_autorisee(cote, quantite, prix)
         # Ordre limite entre le prix actuel et la valeur estimée : patient mais décidé.
@@ -108,6 +121,7 @@ class Chartiste(Agent):
         super().__init__(*args, **kwargs)
         p = kwargs["p"]
         self.fenetre = int(self.rng.integers(p["fenetre_min"], p["fenetre_max"] + 1))
+        self.horizon = 0  # groupe d'horizon d'attention (attribué par le marché)
         self.echelle = p["echelle_tendance"] * self.rng.uniform(0.5, 1.5)
         self.proba_marche = p["proba_ordre_marche"]
         self.taille_max = p["taille_max_ordre"]
@@ -118,6 +132,8 @@ class Chartiste(Agent):
         if tendance is None:
             return
         self.annuler_tout(marche)
+        if abs(tendance) < marche.zone_morte:
+            return
         prix = marche.prix_reference()
         cote, quantite = self.viser(tendance / self.echelle)
         quantite = self.quantite_autorisee(cote, quantite, prix)
@@ -178,7 +194,8 @@ class TeneurDeMarche(Agent):
     def agir(self, t: int, marche: "Marche") -> None:
         prix = marche.reference_teneurs
         vol = marche.volatilite_recente()
-        demi_spread = min(max(self.demi_spread_min, self.aversion_vol * vol), self.demi_spread_max)
+        demi_spread = min(max(self.demi_spread_min + marche.taxe, self.aversion_vol * vol),
+                          self.demi_spread_max)
         stock = (self.actions - self.neutre) / self.position_max  # entre -1 et 1
         centre = prix * math.exp(-self.skew * stock)
         bid = centre * math.exp(-demi_spread)

@@ -89,11 +89,21 @@ docs/                 rapports de validation
 tests/                tests automatiques (python -m pytest)
 ```
 
-## Limites connues (chantier de la phase 3)
+## Mécanismes ajoutés en phase 3
 
-D'après la validation Monte-Carlo :
+- **Horizons hétérogènes** : les chartistes forment trois groupes (court, moyen et long terme).
+  Chaque groupe mesure l'agitation sur sa propre échelle de temps.
+- **Aversion aux pertes** : en marché baissier, l'attention des chartistes réagit deux fois plus fort.
+- **Appels de marge** : un chartiste (hedge fund endetté) dont le capital recule de 5 % sous son
+  plus haut doit couper la moitié de sa position au marché. Il est ensuite suspendu un temps
+  aléatoire, et son exposition cible ne se reconstitue que lentement.
+
+Résultat validé sur 20 univers : effet de levier et asymétrie gains/pertes désormais
+reproduits, avec des intervalles de confiance qui excluent 0.
+
+## Limites connues
+
 - **Queues trop épaisses** : indice de Hill d'environ 1,8, contre environ 3 sur les actions réelles
-- **Mémoire de la volatilité trop courte** : elle s'éteint en environ 400 pas, au lieu de décroître lentement en loi de puissance
-- **Pas d'effet de levier** : les baisses ne font pas plus monter la volatilité que les hausses
-- **Pas d'asymétrie gains/pertes** : les krachs ne sont pas plus violents que les envolées
-- Le moteur JavaScript produit des grappes de volatilité plus faibles que le Python, un écart à expliquer
+- **Mémoire de la volatilité encore un peu courte** : β ≈ 0,75, contre 0,2 à 0,4 sur les marchés réels
+- **Appels de marge sur les fondamentalistes** : s'ils y sont aussi soumis, le marché devient
+  instable (limites de l'arbitrage, Shleifer et Vishny 1997)

@@ -14,7 +14,7 @@ cash_initial = 10000.0     # par agent
 actions_initiales = 100    # par agent : c'est aussi leur position « neutre » (benchmark)
 credit_max = 10000.0       # découvert autorisé par agent (achat sur marge)
 fenetre_volatilite = 50    # pas utilisés pour mesurer la volatilité récente
-memoire_volatilite = 2000  # demi-vie (pas) de la volatilité « normale » de référence
+memoire_volatilite = 10000 # demi-vie (pas) de la volatilité « normale » de référence
 frequence_bilan = 100      # tous les combien de pas on photographie les richesses
 bande_prix = 0.02          # un ordre limite ne peut s'écarter de plus de 2 % du prix
 
@@ -46,8 +46,10 @@ duree_ordre = 200              # durée de vie des ordres (pas)
 [agents.chartistes]
 nombre = 100
 activite = 1.0
-attention = 1.0                # quand la volatilité double, ils tradent 2x plus souvent
-attention_max = 3.0            # plafond de ce multiplicateur
+attention = 2.0                # quand la volatilité double, ils tradent 3x plus souvent
+attention_max = 4.0            # plafond de ce multiplicateur
+horizons_attention = [25, 250, 2500]  # 3 groupes : court, moyen, long terme (demi-vies, pas)
+aversion_pertes = 1.0          # en marché baissier, leur attention réagit 2x plus fort
 position_max = 100
 fenetre_min = 10               # horizon d'analyse de la tendance (pas)
 fenetre_max = 200
@@ -73,3 +75,30 @@ demi_spread_max = 0.01         # demi-fourchette maximale (1 %)
 aversion_volatilite = 2.0      # élargissement de la fourchette quand ça s'agite
 skew_inventaire = 0.005        # décalage des cotations à stock maximal (0,5 %)
 taille_cotation = 30
+
+# ---------------------------------------------------------------------
+#  APPELS DE MARGE (courtier)
+# ---------------------------------------------------------------------
+[marge]
+actif = true
+# Seuls les chartistes (hedge funds endettés) sont suivis : les fondamentalistes jouent le rôle
+# d'investisseurs « value » non endettés. Les soumettre aussi aux appels de marge supprime la
+# force de rappel en pleine chute (« limites de l'arbitrage ») et rend le marché instable.
+types = ["Chartiste"]
+seuil_perte = 0.05             # appel si le capital recule de 5 % sous son plus haut
+reduction = 0.5                # il faut alors couper la moitié de la position
+tranche_liquidation = 20       # titres vendus au marché par pas pendant la liquidation
+duree_suspension = 300         # durée moyenne (aléatoire) de suspension après liquidation
+demi_vie_reprise = 2000        # l'exposition cible, réduite d'autant, se reconstitue lentement
+frequence_controle = 5         # le courtier vérifie tous les 5 pas
+
+# ---------------------------------------------------------------------
+#  RÉGULATION (désactivée par défaut, voir phase 4 : python experimenter.py)
+# ---------------------------------------------------------------------
+[regulation]
+taxe_transaction = 0.0                # ex. 0.001 = 0,1 % payé par chaque partie
+sensibilite_bruiteurs = 0.001         # coût qui divise par e l'activité des bruiteurs
+coupe_circuit_seuil = 0.0             # ex. 0.05 : arrêt si le prix bouge de 5 %...
+coupe_circuit_fenetre = 200           # ... sur cette fenêtre (pas)
+coupe_circuit_duree = 100             # durée de l'arrêt (pas)
+interdiction_vente_decouvert = false
