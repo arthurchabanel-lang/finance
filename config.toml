@@ -93,6 +93,17 @@ demi_vie_reprise = 2000        # l'exposition cible, réduite d'autant, se recon
 frequence_controle = 5         # le courtier vérifie tous les 5 pas
 
 # ---------------------------------------------------------------------
+#  ACHETEUR STRATÉGIQUE (dernier ressort)
+# ---------------------------------------------------------------------
+# Sous une forte décote, une OPA ou un rachat d'actions devient rentable : un acheteur aux
+# poches profondes se manifeste. Il n'intervient jamais en marché normal. Sans lui, le prix
+# pouvait s'effondrer jusqu'à 0,01 € quand les investisseurs value manquaient de financement.
+[acheteur_strategique]
+actif = true
+decote = 0.5                   # achète si le prix tombe sous 50 % de la valeur fondamentale
+titres_par_pas = 50
+
+# ---------------------------------------------------------------------
 #  RÉGULATION (désactivée par défaut, voir phase 4 : python experimenter.py)
 # ---------------------------------------------------------------------
 [regulation]

@@ -41,7 +41,8 @@ INDICATEURS_STRESS = [
     ("recuperation", "Temps de récupération (pas)", "{:.0f}", -1),
 ]
 COULEURS = {"Référence": "#22252b", "Taxe 0,1 %": "#2f6fd0", "Coupe-circuit 3 %": "#db6a21",
-            "Vente à découvert interdite": "#a33ea1", "Levier limité": "#17936a"}
+            "Vente à découvert interdite": "#a33ea1", "Levier des hedge funds limité": "#17936a",
+            "Crédit restreint pour tous": "#8a6d1d"}
 
 
 def verdict(c: dict, sens: int) -> str:

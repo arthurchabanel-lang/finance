@@ -76,6 +76,11 @@ class Marche:
         self.scenario: dict | None = None
 
         self._creer_agents(config)
+        self.strategique = config.get("acheteur_strategique", {"actif": False})
+        if self.strategique["actif"]:
+            from .agents import ActeurExterne
+            self.acheteur = self.ajouter_agent(ActeurExterne())
+            self.acheteur.type_nom = "Acheteur stratégique"
 
     # ----------------------------------------------------------- population
     def _creer_agents(self, config: dict) -> None:
@@ -86,7 +91,7 @@ class Marche:
             for _ in range(p["nombre"]):
                 agent = classe(len(self.agents), cash=cm["cash_initial"],
                                actions=cm["actions_initiales"],
-                               credit_max=cm["credit_max"], rng=self.rng, p=p)
+                               credit_max=p.get("credit_max", cm["credit_max"]), rng=self.rng, p=p)
                 agent.plus_haut = agent.richesse(cm["prix_initial"])
                 if self.reg["interdiction_vente_decouvert"] and not isinstance(agent, TeneurDeMarche):
                     agent.plancher_reglementaire = 0
@@ -290,6 +295,15 @@ class Marche:
 
             if self.marge["actif"]:
                 self._liquidations()
+
+            # Acheteur de dernier ressort : sous une forte décote, une OPA devient rentable.
+            if self.strategique["actif"]:
+                ref = self.prix_reference()
+                plafond = self.strategique["decote"] * self.valeur_fondamentale
+                if ref < plafond:
+                    self.acheteur.annuler_tout(self)
+                    self.envoyer_limite(self.acheteur, ACHAT, plafond,
+                                        self.strategique["titres_par_pas"], duree=1)
 
             # Qui agit à ce pas ? Chaque type a sa fréquence propre.
             ecart = math.log(self.prix_reference() / self.valeur_fondamentale)

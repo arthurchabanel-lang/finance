@@ -28,14 +28,16 @@ POLITIQUES: dict[str, dict] = {
     "Taxe 0,1 %": {"regulation.taxe_transaction": 0.001},
     "Coupe-circuit 3 %": {"regulation.coupe_circuit_seuil": 0.03},
     "Vente à découvert interdite": {"regulation.interdiction_vente_decouvert": True},
-    "Levier limité": {"marche.credit_max": 2000.0},
+    "Levier des hedge funds limité": {"agents.chartistes.credit_max": 2000.0},
+    "Crédit restreint pour tous": {"marche.credit_max": 2000.0},
 }
 DESCRIPTIONS = {
     "Référence": "aucune régulation",
     "Taxe 0,1 %": "chaque partie paie 0,1 % du montant échangé (taxe de type Tobin)",
     "Coupe-circuit 3 %": "cotation suspendue 100 pas si le prix bouge de plus de 3 % en 200 pas",
     "Vente à découvert interdite": "aucun agent (hors teneurs de marché) ne peut détenir moins de 0 titre",
-    "Levier limité": "découvert autorisé réduit de 10 000 € à 2 000 € par agent",
+    "Levier des hedge funds limité": "découvert des chartistes (hedge funds) réduit de 10 000 € à 2 000 €",
+    "Crédit restreint pour tous": "découvert de tous les agents réduit de 10 000 € à 2 000 € (y compris les investisseurs value)",
 }
 
 HORIZON = 50
@@ -49,8 +51,11 @@ STRESS_FIN = STRESS_T + 4000
 def appliquer(config: dict, surcharges: dict) -> dict:
     c = copy.deepcopy(config)
     for cle, v in surcharges.items():
-        section, champ = cle.split(".")
-        c.setdefault(section, {})[champ] = v
+        *chemin, champ = cle.split(".")
+        d = c
+        for k in chemin:
+            d = d.setdefault(k, {})
+        d[champ] = v
     return c
 
 

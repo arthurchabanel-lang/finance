@@ -93,6 +93,9 @@ class Fondamentaliste(Agent):
         super().__init__(*args, **kwargs)
         p = kwargs["p"]
         self.biais = self.rng.normal(0.0, p["dispersion_estimation"])
+        # Un gérant « value » raisonne en euros : sa surpondération maximale est un montant,
+        # pas un nombre de titres (sinon, en plein krach, il ne peut plus acheter à bas prix).
+        self.exposition_max_euros = self.position_max * p.get("prix_reference_limite", 100.0)
         self.echelle = p["echelle_ecart"] * self.rng.uniform(0.5, 1.5)
         self.agressivite = self.rng.uniform(*p["agressivite"])
         self.taille_max = p["taille_max_ordre"]
@@ -103,6 +106,7 @@ class Fondamentaliste(Agent):
         prix = marche.prix_reference()
         valeur = marche.valeur_fondamentale * math.exp(self.biais)
         ecart = math.log(valeur / prix)  # > 0 : sous-évalué
+        self.position_max = self.exposition_max_euros / prix
         if abs(ecart) < marche.zone_morte:  # le gain espéré ne couvre pas les frais
             return
         cote, quantite = self.viser(ecart / self.echelle)
