@@ -59,6 +59,22 @@ achat sur marge borné.
 Robustesse avec la configuration actuelle : 34 critères réussis sur 36, sur 6 graines aléatoires
 (les échecs sont des cas limites : peu de crises dans un univers, autocorrélation à 0,12 pour un seuil de 0,12).
 
+## Phase 2 : la salle des marchés
+
+`web/salle-des-marches.html` est le même moteur, porté en JavaScript. Le marché tourne en
+direct dans le navigateur, avec des curseurs de comportement et des crises à provoquer.
+Il suffit d'ouvrir le fichier dans un navigateur.
+
+## Phase 3 : validation Monte-Carlo
+
+```bash
+python valider.py
+```
+
+Ce script fait tourner 20 univers indépendants et confronte le simulateur à 11 faits
+stylisés de la littérature, avec intervalles de confiance. Le dernier rapport est dans
+[`docs/validation.md`](docs/validation.md).
+
 ## Structure du code
 
 ```
@@ -67,12 +83,17 @@ marche/agents.py      les stratégies
 marche/simulation.py  l'horloge du marché, la valeur fondamentale, la comptabilité
 marche/analyse.py     les tests statistiques
 marche/graphiques.py  le tableau de bord
+marche/validation.py  la validation Monte-Carlo (phase 3)
+web/                  la salle des marchés interactive (phase 2)
+docs/                 rapports de validation
 tests/                tests automatiques (python -m pytest)
 ```
 
-## Limites connues (prochaines phases)
+## Limites connues (chantier de la phase 3)
 
-- Indice de queue de Hill proche de 2, contre environ 3 sur les actions réelles :
-  les queues sont un peu *trop* épaisses
-- Légère autocorrélation négative des rendements à court terme (effet de sur-réaction)
-- Un seul actif, des stratégies fixes (pas encore d'apprentissage)
+D'après la validation Monte-Carlo :
+- **Queues trop épaisses** : indice de Hill d'environ 1,8, contre environ 3 sur les actions réelles
+- **Mémoire de la volatilité trop courte** : elle s'éteint en environ 400 pas, au lieu de décroître lentement en loi de puissance
+- **Pas d'effet de levier** : les baisses ne font pas plus monter la volatilité que les hausses
+- **Pas d'asymétrie gains/pertes** : les krachs ne sont pas plus violents que les envolées
+- Le moteur JavaScript produit des grappes de volatilité plus faibles que le Python, un écart à expliquer
