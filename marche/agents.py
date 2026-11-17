@@ -204,6 +204,19 @@ class TeneurDeMarche(Agent):
         marche.envoyer_limite(self, VENTE, ask, self.quantite_autorisee(VENTE, self.taille, ask), duree=1)
 
 
+class ActeurExterne(Agent):
+    """Acteur extérieur des scénarios (fonds en liquidation, raid acheteur) : sans limites."""
+
+    type_nom = "Externe"
+
+    def __init__(self, cash: float = 0.0) -> None:
+        super().__init__(-1, cash=cash, actions=0, credit_max=math.inf,
+                         rng=None, p={"position_max": 10 ** 12})
+
+    def agir(self, t: int, marche: "Marche") -> None:
+        pass
+
+
 TYPES_AGENTS = {
     "fondamentalistes": Fondamentaliste,
     "chartistes": Chartiste,
