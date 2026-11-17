@@ -1,0 +1,804 @@
+<title>Salle des marchés</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Layout : poste de trader. Bandeau de cotation en haut, pupitre de commandes à gauche,
+   écrans de marché à droite (graphe des prix, carnet, performances, faits stylisés). */
+:root {
+  --bg: #f3f5f8;
+  --surface: #ffffff;
+  --surface-2: #eef1f5;
+  --ink: #152033;
+  --muted: #5d6779;
+  --line: #dde2ea;
+  --accent: #b86e00;
+  --accent-soft: #f6e7cf;
+  --bid: #16788a;
+  --ask: #c93f55;
+  --fond: #8b95a8;
+  --t-fond: #2f6fd0;
+  --t-chart: #db6a21;
+  --t-bruit: #858c99;
+  --t-mm: #17936a;
+  --ok: #17845f;
+  --warn: #b86e00;
+  --bad: #c93f55;
+  --font-ui: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  --font-num: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e131b; --surface: #161d28; --surface-2: #1d2633; --ink: #e5e9f0; --muted: #96a0b2;
+    --line: #283244; --accent: #f0a63a; --accent-soft: #3a2c14; --bid: #4cb4c7; --ask: #f2718a;
+    --fond: #7b869a; --t-fond: #5d95ec; --t-chart: #f08a45; --t-bruit: #9aa1ad; --t-mm: #3fbf8f;
+    --ok: #3fbf8f; --warn: #f0a63a; --bad: #f2718a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e131b; --surface: #161d28; --surface-2: #1d2633; --ink: #e5e9f0; --muted: #96a0b2;
+  --line: #283244; --accent: #f0a63a; --accent-soft: #3a2c14; --bid: #4cb4c7; --ask: #f2718a;
+  --fond: #7b869a; --t-fond: #5d95ec; --t-chart: #f08a45; --t-bruit: #9aa1ad; --t-mm: #3fbf8f;
+  --ok: #3fbf8f; --warn: #f0a63a; --bad: #f2718a; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-ui); font-size: 14px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 16px 32px;
+}
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.app { max-width: 1440px; margin: 0 auto; display: grid; gap: 14px; }
+
+/* Bandeau de cotation */
+.bandeau {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px 28px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px;
+}
+.marque { display: grid; gap: 2px; margin-right: auto; min-width: 0; }
+.marque h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+.marque p { margin: 0; color: var(--muted); font-size: 12.5px; }
+.cote { display: grid; gap: 2px; }
+.cote .lib { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.cote .val { font-family: var(--font-num); font-size: 17px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.cote .val.grand { font-size: 24px; font-weight: 700; }
+.hausse { color: var(--ok); } .baisse { color: var(--bad); }
+.regime {
+  font-family: var(--font-num); font-size: 12px; font-weight: 700; letter-spacing: 0.06em;
+  padding: 5px 10px; border-radius: 999px; text-transform: uppercase; border: 1px solid currentColor;
+}
+.regime.calme { color: var(--ok); } .regime.agite { color: var(--warn); } .regime.crise { color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, transparent); }
+
+/* Grille principale */
+.corps { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 14px; align-items: start; }
+@media (max-width: 980px) { .corps { grid-template-columns: minmax(0, 1fr); } .pupitre { order: 2; } }
+
+.panneau { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+.panneau h2 { margin: 0 0 10px; font-size: 13px; font-weight: 600; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; text-wrap: balance; }
+.panneau h2 small { font-weight: 400; color: var(--muted); font-size: 11.5px; }
+
+/* Pupitre */
+.pupitre { display: grid; gap: 14px; }
+.transport { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+button {
+  font: inherit; font-weight: 600; font-size: 13px; cursor: pointer; border-radius: 8px; padding: 9px 10px;
+  border: 1px solid var(--line); background: var(--surface-2); color: var(--ink);
+  transition: background .15s, border-color .15s;
+}
+button:hover { border-color: var(--muted); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button.principal { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+button.choc { text-align: left; display: grid; gap: 2px; font-weight: 600; }
+button.choc span { font-weight: 400; font-size: 11.5px; color: var(--muted); }
+button.choc.rouge { border-left: 3px solid var(--bad); }
+button.choc.vert { border-left: 3px solid var(--ok); }
+button.choc.ambre { border-left: 3px solid var(--accent); }
+button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.vitesses { display: flex; gap: 6px; }
+.vitesses button { flex: 1; padding: 6px 0; font-family: var(--font-num); font-size: 12px; }
+.chocs { display: grid; gap: 8px; }
+
+.reglage { display: grid; gap: 4px; padding-block: 6px; }
+.reglage + .reglage { border-top: 1px dashed var(--line); }
+.reglage label { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 500; }
+.reglage label output { font-family: var(--font-num); font-size: 12.5px; color: var(--accent); font-weight: 700; }
+.reglage p { margin: 0; font-size: 11.5px; color: var(--muted); line-height: 1.4; }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+.groupe-titre { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 4px 0 2px; display: flex; align-items: center; gap: 6px; }
+.pastille { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+
+/* Écrans */
+.ecrans { display: grid; gap: 14px; min-width: 0; }
+.ligne { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 720px) { .ligne { grid-template-columns: minmax(0, 1fr); } }
+canvas { display: block; width: 100%; }
+.legende { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 11.5px; color: var(--muted); margin-top: 8px; }
+.legende i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
+.onglets { display: flex; gap: 4px; }
+.onglets button { padding: 3px 8px; font-size: 11.5px; font-weight: 500; }
+
+/* Faits stylisés */
+.faits { display: grid; gap: 8px; }
+.fait { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 8px; background: var(--surface-2); }
+.fait .etat { font-family: var(--font-num); font-size: 10.5px; font-weight: 700; padding: 3px 7px; border-radius: 5px; letter-spacing: 0.04em; }
+.fait .etat.oui { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
+.fait .etat.non { color: var(--bad); background: color-mix(in srgb, var(--bad) 14%, transparent); }
+.fait .etat.attente { color: var(--muted); background: var(--surface); }
+.fait b { font-size: 13px; font-weight: 600; display: block; }
+.fait small { color: var(--muted); font-size: 11.5px; }
+.fait .mesure { font-family: var(--font-num); font-size: 13px; font-weight: 700; text-align: right; }
+
+/* Classement et journal */
+.classement { display: grid; gap: 6px; margin-top: 10px; }
+.classement div { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; font-size: 12.5px; }
+.journal { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 236px; overflow-y: auto; }
+.journal li { display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 8px; font-size: 12.5px; line-height: 1.4; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.journal li .t { font-family: var(--font-num); color: var(--muted); font-size: 11.5px; }
+.journal li.rouge b { color: var(--bad); } .journal li.vert b { color: var(--ok); } .journal li.ambre b { color: var(--accent); }
+.note { font-size: 11.5px; color: var(--muted); margin: 0; line-height: 1.5; }
+@media (prefers-reduced-motion: reduce) { button { transition: none; } }
+</style>
+
+<div class="app">
+  <header class="bandeau">
+    <div class="marque">
+      <h1>Salle des marchés</h1>
+      <p>402 agents échangent un titre fictif, ACME, sur un carnet d'ordres en continu. Le marché tourne en direct dans votre navigateur.</p>
+    </div>
+    <div class="cote"><span class="lib">ACME · dernier</span><span class="val grand" id="c-prix">—</span></div>
+    <div class="cote"><span class="lib">Var. depuis l'ouverture</span><span class="val" id="c-var">—</span></div>
+    <div class="cote"><span class="lib">Valeur fondamentale</span><span class="val" id="c-fond">—</span></div>
+    <div class="cote"><span class="lib">Fourchette</span><span class="val" id="c-spread">—</span></div>
+    <div class="cote"><span class="lib">Pas de temps</span><span class="val" id="c-t">—</span></div>
+    <span class="regime calme" id="c-regime">Calme</span>
+  </header>
+
+  <div class="corps">
+    <aside class="pupitre">
+      <section class="panneau">
+        <h2>Séance</h2>
+        <div class="transport">
+          <button class="principal" id="b-lecture" type="button">Pause</button>
+          <button id="b-reset" type="button">Nouvelle séance</button>
+        </div>
+        <div class="groupe-titre" style="margin-top:12px">Vitesse (pas par image)</div>
+        <div class="vitesses" id="vitesses">
+          <button type="button" data-v="1">×1</button>
+          <button type="button" data-v="5">×5</button>
+          <button type="button" data-v="20" aria-pressed="true">×20</button>
+          <button type="button" data-v="60">×60</button>
+        </div>
+      </section>
+
+      <section class="panneau">
+        <h2>Provoquer un événement</h2>
+        <div class="chocs">
+          <button class="choc rouge" id="e-liquidation" type="button">Liquidation forcée<span>Un fonds doit vendre 4 000 titres au marché, en urgence.</span></button>
+          <button class="choc vert" id="e-achat" type="button">Raid acheteur<span>Un investisseur ramasse 4 000 titres au marché.</span></button>
+          <button class="choc rouge" id="e-news-moins" type="button">Avertissement sur résultats<span>La valeur fondamentale chute de 8 %.</span></button>
+          <button class="choc vert" id="e-news-plus" type="button">Résultats record<span>La valeur fondamentale bondit de 8 %.</span></button>
+          <button class="choc ambre" id="e-mm" type="button" aria-pressed="false">Grève des teneurs de marché<span>Ils retirent toutes leurs cotations.</span></button>
+        </div>
+      </section>
+
+      <section class="panneau">
+        <h2>Comportements <small>effet immédiat</small></h2>
+        <div class="groupe-titre"><span class="pastille" style="background:var(--t-chart)"></span>Chartistes</div>
+        <div class="reglage">
+          <label for="r-act-chart">Activité <output id="o-act-chart"></output></label>
+          <input type="range" id="r-act-chart" min="0" max="3" step="0.1" value="1">
+        </div>
+        <div class="reglage">
+          <label for="r-attention">Attention à l'agitation <output id="o-attention"></output></label>
+          <input type="range" id="r-attention" min="0" max="4" step="0.1" value="1">
+          <p>À 0, ils tradent au même rythme quel que soit le marché. Plus elle est haute, plus ils se ruent quand la volatilité monte.</p>
+        </div>
+        <div class="groupe-titre"><span class="pastille" style="background:var(--t-fond)"></span>Fondamentalistes</div>
+        <div class="reglage">
+          <label for="r-act-fond">Activité <output id="o-act-fond"></output></label>
+          <input type="range" id="r-act-fond" min="0" max="3" step="0.1" value="1">
+        </div>
+        <div class="reglage">
+          <label for="r-react">Réactivité à la mauvaise valorisation <output id="o-react"></output></label>
+          <input type="range" id="r-react" min="0" max="4" step="0.1" value="1">
+          <p>À 0, l'arbitrage ne s'accélère pas quand l'écart de valorisation se creuse. Les bulles deviennent alors violentes.</p>
+        </div>
+        <div class="groupe-titre">Environnement</div>
+        <div class="reglage">
+          <label for="r-news">Fréquence des news <output id="o-news"></output></label>
+          <input type="range" id="r-news" min="0" max="5" step="0.5" value="1">
+        </div>
+        <div class="reglage">
+          <label for="r-bande">Bande de prix <output id="o-bande"></output></label>
+          <input type="range" id="r-bande" min="0.5" max="10" step="0.5" value="2">
+          <p>L'écart maximal entre un ordre limite et le prix de marché.</p>
+        </div>
+      </section>
+    </aside>
+
+    <main class="ecrans">
+      <section class="panneau">
+        <h2>Prix et valeur fondamentale
+          <span class="onglets" id="fenetres">
+            <button type="button" data-f="2000">2 000 pas</button>
+            <button type="button" data-f="8000" aria-pressed="true">8 000 pas</button>
+            <button type="button" data-f="0">Tout</button>
+          </span>
+        </h2>
+        <canvas id="g-prix" height="300"></canvas>
+        <div class="legende">
+          <span><i style="background:var(--ink)"></i>Prix (milieu de fourchette)</span>
+          <span><i style="background:var(--fond)"></i>Valeur fondamentale</span>
+          <span><i style="background:var(--accent)"></i>Événement provoqué</span>
+          <span><i style="background:color-mix(in srgb, var(--muted) 45%, transparent)"></i>News aléatoire</span>
+        </div>
+      </section>
+
+      <div class="ligne">
+        <section class="panneau">
+          <h2>Carnet d'ordres <small id="carnet-info">10 meilleures limites</small></h2>
+          <canvas id="g-carnet" height="260"></canvas>
+          <div class="legende">
+            <span><i style="background:var(--bid)"></i>Acheteurs (bid)</span>
+            <span><i style="background:var(--ask)"></i>Vendeurs (ask)</span>
+          </div>
+        </section>
+        <section class="panneau">
+          <h2>Qui gagne ? <small>performance moyenne par stratégie</small></h2>
+          <canvas id="g-perf" height="180"></canvas>
+          <div class="classement" id="classement"></div>
+        </section>
+      </div>
+
+      <div class="ligne">
+        <section class="panneau">
+          <h2>Rendements et frénésie <small>par tranche de 50 pas</small></h2>
+          <canvas id="g-rend" height="200"></canvas>
+          <div class="legende">
+            <span><i style="background:var(--ink)"></i>Rendement (%)</span>
+            <span><i style="background:var(--t-chart)"></i>Activité des chartistes (×)</span>
+          </div>
+        </section>
+        <section class="panneau">
+          <h2>Faits stylisés <small id="faits-info">en direct</small></h2>
+          <div class="faits" id="faits"></div>
+        </section>
+      </div>
+
+      <div class="ligne">
+        <section class="panneau">
+          <h2>Journal de marché</h2>
+          <ul class="journal" id="journal"></ul>
+        </section>
+        <section class="panneau">
+          <h2>Comment lire ce marché</h2>
+          <p class="note">Les <b style="color:var(--t-fond)">fondamentalistes</b> parient sur un retour du prix vers la valeur qu'ils estiment. Les <b style="color:var(--t-chart)">chartistes</b> suivent la tendance, et tradent davantage quand le marché s'agite. Les <b style="color:var(--t-bruit)">bruiteurs</b> passent des ordres au hasard, et les <b style="color:var(--t-mm)">teneurs de marché</b> cotent en continu en gérant leur stock.</p>
+          <p class="note" style="margin-top:8px">Personne n'a programmé de krach. Les secousses naissent de l'interaction entre ces stratégies. Essayez par exemple une grève des teneurs de marché suivie d'une liquidation forcée, ou mettez la réactivité des fondamentalistes à 0 et l'attention des chartistes à 4.</p>
+          <p class="note" style="margin-top:8px">Moteur identique au simulateur Python (phase 1) : carnet d'ordres prix-temps, tick de 0,01 €, ordres limites avec durée de vie, positions bornées par rapport à un benchmark.</p>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+"use strict";
+// =====================================================================
+//  Paramètres (identiques à config.toml du simulateur Python)
+// =====================================================================
+const CONFIG = {
+  marche: { tick: 0.01, prix_initial: 100, cash_initial: 10000, actions_initiales: 100, credit_max: 10000,
+            fenetre_volatilite: 50, memoire_volatilite: 2000, frequence_bilan: 100, bande_prix: 0.02 },
+  fondamental: { volatilite: 0.0003, proba_news: 0.001, amplitude_news: 0.01 },
+  agents: {
+    fondamentalistes: { nombre: 100, activite: 1.0, reactivite_ecart: 1.0, position_max: 100, dispersion_estimation: 0.01,
+                        echelle_ecart: 0.03, agressivite: [0.0, 0.5], taille_max_ordre: 15, duree_ordre: 200 },
+    chartistes: { nombre: 100, activite: 1.0, attention: 1.0, attention_max: 3.0, position_max: 100, fenetre_min: 10,
+                  fenetre_max: 200, echelle_tendance: 0.03, proba_ordre_marche: 0.3, taille_max_ordre: 10, duree_ordre: 50 },
+    bruiteurs: { nombre: 200, activite: 2.0, position_max: 100, proba_ordre_marche: 0.2, dispersion_prix: 0.002,
+                 taille_ordre: 5, duree_ordre: 100 },
+    teneurs_de_marche: { nombre: 2, position_max: 500, demi_spread_min: 0.0005, demi_spread_max: 0.01,
+                         aversion_volatilite: 2.0, skew_inventaire: 0.005, taille_cotation: 30 },
+  },
+};
+// Réglages modifiables en direct (multiplicateurs appliqués à la config)
+const R = { actChart: 1, attention: 1, actFond: 1, react: 1, news: 1, bande: 0.02, greveMM: false };
+
+// =====================================================================
+//  Aléatoire reproductible
+// =====================================================================
+class Alea {
+  constructor(graine) { this.s = graine >>> 0; this.reserve = null; }
+  random() { let t = (this.s += 0x6D2B79F5); t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
+  normal(mu = 0, sigma = 1) {
+    if (this.reserve !== null) { const z = this.reserve; this.reserve = null; return mu + sigma * z; }
+    let u = 0; while (u === 0) u = this.random();
+    const v = this.random(), r = Math.sqrt(-2 * Math.log(u));
+    this.reserve = r * Math.sin(2 * Math.PI * v);
+    return mu + sigma * r * Math.cos(2 * Math.PI * v);
+  }
+  uniforme(a, b) { return a + (b - a) * this.random(); }
+  entier(a, bExclu) { return a + Math.floor(this.random() * (bExclu - a)); }
+  poisson(l) {
+    if (l <= 0) return 0;
+    if (l > 30) return Math.max(0, Math.round(l + Math.sqrt(l) * this.normal()));
+    const L = Math.exp(-l); let k = 0, p = 1;
+    do { k++; p *= this.random(); } while (p > L);
+    return k - 1;
+  }
+}
+
+// =====================================================================
+//  Carnet d'ordres (priorité prix puis temps)
+// =====================================================================
+const ACHAT = 1, VENTE = -1;
+class Tas {
+  constructor() { this.a = []; }
+  get taille() { return this.a.length; }
+  tete() { return this.a[0]; }
+  avant(x, y) { return x.k < y.k || (x.k === y.k && x.s < y.s); }
+  push(e) { const a = this.a; a.push(e); let i = a.length - 1;
+    while (i > 0) { const p = (i - 1) >> 1; if (!this.avant(a[i], a[p])) break; [a[i], a[p]] = [a[p], a[i]]; i = p; } }
+  pop() { const a = this.a, top = a[0], der = a.pop();
+    if (a.length) { a[0] = der; let i = 0;
+      for (;;) { const g = 2 * i + 1, d = g + 1; let m = i;
+        if (g < a.length && this.avant(a[g], a[m])) m = g;
+        if (d < a.length && this.avant(a[d], a[m])) m = d;
+        if (m === i) break; [a[i], a[m]] = [a[m], a[i]]; i = m; } }
+    return top; }
+}
+class Carnet {
+  constructor() { this.achats = new Tas(); this.ventes = new Tas(); this.ordres = new Map(); this.id = 1; this.seq = 0; }
+  _nettoyer(tas, t) {
+    while (tas.taille) { const o = tas.tete().o;
+      if (o.actif && o.q > 0 && o.expire > t) return;
+      tas.pop(); o.actif = false; this.ordres.delete(o.id); }
+  }
+  meilleurAchat(t) { this._nettoyer(this.achats, t); return this.achats.taille ? this.achats.tete().o : null; }
+  meilleureVente(t) { this._nettoyer(this.ventes, t); return this.ventes.taille ? this.ventes.tete().o : null; }
+  annuler(id) { const o = this.ordres.get(id); if (o) { o.actif = false; this.ordres.delete(id); } }
+  profondeur(t, niveaux) {
+    const agreger = (tas, signe) => { const m = new Map();
+      for (const e of tas.a) { const o = e.o; if (o.actif && o.q > 0 && o.expire > t) m.set(o.prix, (m.get(o.prix) || 0) + o.q); }
+      return [...m.entries()].sort((x, y) => signe * (y[0] - x[0])).slice(0, niveaux); };
+    return [agreger(this.achats, ACHAT), agreger(this.ventes, VENTE)];
+  }
+  limite(agent, cote, prix, q, t, duree) {
+    if (q <= 0 || prix <= 0) return [null, []];
+    const trs = this._executer(agent, cote, q, t, prix);
+    let reste = q; for (const tr of trs) reste -= tr.q;
+    if (reste <= 0) return [null, trs];
+    const o = { id: this.id++, agent, cote, prix, q: reste, expire: t + duree, actif: true };
+    (cote === ACHAT ? this.achats : this.ventes).push({ k: cote === ACHAT ? -prix : prix, s: this.seq++, o });
+    this.ordres.set(o.id, o);
+    return [o, trs];
+  }
+  marche(agent, cote, q, t) { return q > 0 ? this._executer(agent, cote, q, t, null) : []; }
+  _executer(agent, cote, q, t, limite) {
+    const trs = [], tas = cote === ACHAT ? this.ventes : this.achats;
+    while (q > 0) {
+      this._nettoyer(tas, t); if (!tas.taille) break;
+      const c = tas.tete().o;
+      if (limite !== null && ((cote === ACHAT && c.prix > limite) || (cote === VENTE && c.prix < limite))) break;
+      if (c.agent === agent) { this.annuler(c.id); continue; }
+      const x = Math.min(q, c.q); c.q -= x; q -= x;
+      trs.push({ prix: c.prix, q: x, acheteur: cote === ACHAT ? agent : c.agent, vendeur: cote === ACHAT ? c.agent : agent });
+      if (c.q === 0) { c.actif = false; this.ordres.delete(c.id); }
+    }
+    return trs;
+  }
+}
+
+// =====================================================================
+//  Agents
+// =====================================================================
+class Agent {
+  constructor(id, p, rng, cm) {
+    this.id = id; this.cash = cm.cash_initial; this.actions = cm.actions_initiales; this.neutre = cm.actions_initiales;
+    this.positionMax = p.position_max; this.creditMax = cm.credit_max; this.rng = rng; this.ordres = [];
+  }
+  richesse(prix) { return this.cash + this.actions * prix; }
+  autorise(cote, q, prix) {
+    if (cote === ACHAT) {
+      q = Math.min(q, this.neutre + this.positionMax - this.actions);
+      if (isFinite(this.creditMax)) q = Math.min(q, Math.floor(Math.max(this.cash + this.creditMax, 0) / Math.max(prix, 1e-9)));
+    } else q = Math.min(q, this.actions - (this.neutre - this.positionMax));
+    return Math.max(Math.floor(q), 0);
+  }
+  annulerTout(m) { for (const id of this.ordres) m.carnet.annuler(id); this.ordres.length = 0; }
+  viser(signal) {
+    const ecart = this.neutre + this.positionMax * Math.tanh(signal) - this.actions;
+    if (Math.abs(ecart) < 1) return [ACHAT, 0];
+    return [ecart > 0 ? ACHAT : VENTE, Math.min(Math.round(Math.abs(ecart)), this.tailleMax)];
+  }
+}
+class Fondamentaliste extends Agent {
+  constructor(id, p, rng, cm) { super(id, p, rng, cm); this.type = "fond";
+    this.biais = rng.normal(0, p.dispersion_estimation); this.echelle = p.echelle_ecart * rng.uniforme(0.5, 1.5);
+    this.agressivite = rng.uniforme(...p.agressivite); this.tailleMax = p.taille_max_ordre; this.duree = p.duree_ordre; }
+  agir(m) {
+    this.annulerTout(m);
+    const prix = m.prixReference(), ecart = Math.log(m.fondamental * Math.exp(this.biais) / prix);
+    let [cote, q] = this.viser(ecart / this.echelle); q = this.autorise(cote, q, prix);
+    m.envoyerLimite(this, cote, prix * Math.exp(this.agressivite * ecart), q, this.duree);
+  }
+}
+class Chartiste extends Agent {
+  constructor(id, p, rng, cm) { super(id, p, rng, cm); this.type = "chart";
+    this.fenetre = rng.entier(p.fenetre_min, p.fenetre_max + 1); this.echelle = p.echelle_tendance * rng.uniforme(0.5, 1.5);
+    this.probaMarche = p.proba_ordre_marche; this.tailleMax = p.taille_max_ordre; this.duree = p.duree_ordre; }
+  agir(m) {
+    const tendance = m.rendement(this.fenetre); if (tendance === null) return;
+    this.annulerTout(m);
+    const prix = m.prixReference();
+    let [cote, q] = this.viser(tendance / this.echelle); q = this.autorise(cote, q, prix);
+    if (this.rng.random() < this.probaMarche) m.envoyerMarche(this, cote, q);
+    else m.envoyerLimite(this, cote, prix * Math.exp(cote * Math.abs(tendance) * 0.5), q, this.duree);
+  }
+}
+class Bruiteur extends Agent {
+  constructor(id, p, rng, cm) { super(id, p, rng, cm); this.type = "bruit";
+    this.probaMarche = p.proba_ordre_marche; this.dispersion = p.dispersion_prix; this.taille = p.taille_ordre; this.duree = p.duree_ordre; }
+  agir(m) {
+    const prix = m.prixReference(), cote = this.rng.random() < 0.5 ? ACHAT : VENTE;
+    const q = this.autorise(cote, this.rng.entier(1, this.taille + 1), prix);
+    if (this.rng.random() < this.probaMarche) m.envoyerMarche(this, cote, q);
+    else m.envoyerLimite(this, cote, prix * Math.exp(-cote * this.rng.normal(this.dispersion, this.dispersion)), q, this.duree);
+  }
+}
+class TeneurDeMarche extends Agent {
+  constructor(id, p, rng, cm) { super(id, p, rng, cm); this.type = "mm"; this.p = p; this.creditMax = Infinity; }
+  agir(m) {
+    const p = this.p, prix = m.referenceTeneurs, vol = m.volatiliteRecente();
+    const ds = Math.min(Math.max(p.demi_spread_min, p.aversion_volatilite * vol), p.demi_spread_max);
+    const centre = prix * Math.exp(-p.skew_inventaire * (this.actions - this.neutre) / this.positionMax);
+    const bid = centre * Math.exp(-ds), ask = centre * Math.exp(ds);
+    m.envoyerLimite(this, ACHAT, bid, this.autorise(ACHAT, p.taille_cotation, bid), 1);
+    m.envoyerLimite(this, VENTE, ask, this.autorise(VENTE, p.taille_cotation, ask), 1);
+  }
+}
+// Acteur extérieur des scénarios (fonds en liquidation, raid acheteur) : hors classement.
+class Externe extends Agent {
+  constructor(id, cm) { super(id, { position_max: 1e12 }, null, cm); this.type = "externe"; this.creditMax = Infinity; }
+}
+
+// =====================================================================
+//  Le marché
+// =====================================================================
+class Marche {
+  constructor(cfg, graine) {
+    this.cfg = cfg; this.rng = new Alea(graine); const cm = cfg.marche;
+    this.tick = cm.tick; this.carnet = new Carnet(); this.t = 0;
+    this.fondamental = cm.prix_initial; this.dernierPrix = cm.prix_initial;
+    this.alphaVol = 1 - Math.pow(0.5, 1 / cm.memoire_volatilite); this.varLongue = null; this.volCache = [-1, 0];
+    this.prix = [cm.prix_initial]; this.fond = [cm.prix_initial]; this.spread = [NaN]; this.volume = [0]; this.attention = [1];
+    this.news = []; this.evenements = []; this.bilanT = []; this.bilan = { fond: [], chart: [], bruit: [], mm: [] };
+    this.volPas = 0; this.multiplicateur = 1; this.scenario = null; this.referenceTeneurs = cm.prix_initial;
+    this.agents = []; const classes = { fondamentalistes: Fondamentaliste, chartistes: Chartiste, bruiteurs: Bruiteur, teneurs_de_marche: TeneurDeMarche };
+    for (const [cle, C] of Object.entries(classes)) for (let i = 0; i < cfg.agents[cle].nombre; i++) this.agents.push(new C(this.agents.length, cfg.agents[cle], this.rng, cm));
+    this.externe = new Externe(this.agents.length, cm); this.agents.push(this.externe);
+    this.teneurs = this.agents.filter(a => a.type === "mm");
+    this.groupes = { fondamentalistes: this.agents.filter(a => a.type === "fond"), chartistes: this.agents.filter(a => a.type === "chart"), bruiteurs: this.agents.filter(a => a.type === "bruit") };
+  }
+  prixReference() {
+    const b = this.carnet.meilleurAchat(this.t), a = this.carnet.meilleureVente(this.t);
+    return b && a ? 0.5 * (b.prix + a.prix) * this.tick : this.dernierPrix;
+  }
+  rendement(f) { const n = this.prix.length; return n <= f ? null : Math.log(this.prix[n - 1] / this.prix[n - 1 - f]); }
+  volatiliteRecente() {
+    if (this.volCache[0] === this.t) return this.volCache[1];
+    const n = this.prix.length, d = Math.max(0, n - this.cfg.marche.fenetre_volatilite - 1); let s = 0, s2 = 0, k = 0;
+    for (let i = d + 1; i < n; i++) { const r = Math.log(this.prix[i] / this.prix[i - 1]); s += r; s2 += r * r; k++; }
+    const v = k > 1 ? Math.sqrt(Math.max(s2 / k - (s / k) ** 2, 0)) : 0;
+    this.volCache = [this.t, v]; return v;
+  }
+  stress() {
+    if (!this.varLongue || this.t < 2 * this.cfg.marche.fenetre_volatilite) return 1;
+    return this.volatiliteRecente() / Math.sqrt(this.varLongue);
+  }
+  envoyerLimite(agent, cote, prix, q, duree) {
+    if (q <= 0 || !isFinite(prix)) return;
+    const ref = this.prixReference();
+    prix = Math.min(Math.max(prix, ref * Math.exp(-R.bande)), ref * Math.exp(R.bande));
+    const ticks = cote === ACHAT ? Math.floor(prix / this.tick) : Math.ceil(prix / this.tick);
+    const [o, trs] = this.carnet.limite(agent.id, cote, Math.max(ticks, 1), q, this.t, duree);
+    this.regler(trs); if (o) agent.ordres.push(o.id);
+  }
+  envoyerMarche(agent, cote, q) { this.regler(this.carnet.marche(agent.id, cote, q, this.t)); }
+  regler(trs) {
+    for (const tr of trs) {
+      const montant = tr.prix * this.tick * tr.q, a = this.agents[tr.acheteur], v = this.agents[tr.vendeur];
+      a.cash -= montant; a.actions += tr.q; v.cash += montant; v.actions -= tr.q;
+      this.dernierPrix = tr.prix * this.tick; this.volPas += tr.q;
+    }
+  }
+  chocFondamental(taille, libelle) { this.fondamental *= Math.exp(taille); this.evenements.push({ t: this.t, libelle }); }
+  lancerScenario(cote, total, libelle) { this.scenario = { cote, restant: total, parPas: 40 }; this.evenements.push({ t: this.t, libelle }); }
+  pas() {
+    const cf = this.cfg.fondamental; this.t++; this.volPas = 0;
+    let choc = this.rng.normal(0, cf.volatilite);
+    if (this.rng.random() < cf.proba_news * R.news) { const n = this.rng.normal(0, cf.amplitude_news); choc += n; this.news.push({ t: this.t, n }); }
+    this.fondamental *= Math.exp(choc);
+
+    for (const mm of this.teneurs) mm.annulerTout(this);
+    this.referenceTeneurs = this.prixReference();
+    if (!R.greveMM) for (const mm of this.teneurs) mm.agir(this);
+
+    if (this.scenario) {
+      const q = Math.min(this.scenario.parPas, this.scenario.restant);
+      this.envoyerMarche(this.externe, this.scenario.cote, q);
+      this.scenario.restant -= q; if (this.scenario.restant <= 0) this.scenario = null;
+    }
+
+    const stress = this.stress(), ecart = Math.log(this.prixReference() / this.fondamental), A = this.cfg.agents;
+    const pc = A.chartistes, pf = A.fondamentalistes;
+    this.multiplicateur = R.attention > 0 ? Math.min(1 + R.attention * Math.max(stress - 1, 0), pc.attention_max) : 1;
+    const intensites = {
+      fondamentalistes: pf.activite * R.actFond * (1 + R.react * Math.abs(ecart) / pf.echelle_ecart),
+      chartistes: pc.activite * R.actChart * this.multiplicateur,
+      bruiteurs: A.bruiteurs.activite,
+    };
+    const actifs = [];
+    for (const [cle, g] of Object.entries(this.groupes)) { const n = this.rng.poisson(intensites[cle]); for (let i = 0; i < n; i++) actifs.push(g[this.rng.entier(0, g.length)]); }
+    for (let i = actifs.length - 1; i > 0; i--) { const j = this.rng.entier(0, i + 1); [actifs[i], actifs[j]] = [actifs[j], actifs[i]]; }
+    for (const a of actifs) a.agir(this);
+
+    const b = this.carnet.meilleurAchat(this.t), a = this.carnet.meilleureVente(this.t);
+    this.prix.push(this.prixReference()); this.fond.push(this.fondamental);
+    this.spread.push(b && a ? (a.prix - b.prix) * this.tick : NaN); this.volume.push(this.volPas); this.attention.push(this.multiplicateur);
+    const n = this.prix.length, r2 = Math.log(this.prix[n - 1] / this.prix[n - 2]) ** 2, alpha = Math.max(this.alphaVol, 1 / this.t);
+    this.varLongue = this.varLongue === null ? r2 : this.varLongue + alpha * (r2 - this.varLongue);
+    if (this.t % this.cfg.marche.frequence_bilan === 0) this.faireBilan();
+  }
+  faireBilan() {
+    const p = this.prix[this.prix.length - 1], s = { fond: [0, 0], chart: [0, 0], bruit: [0, 0], mm: [0, 0] };
+    for (const a of this.agents) if (s[a.type]) { s[a.type][0] += a.richesse(p); s[a.type][1]++; }
+    this.bilanT.push(this.t); for (const k in s) this.bilan[k].push(s[k][0] / s[k][1]);
+  }
+}
+
+// =====================================================================
+//  Statistiques (mêmes définitions que marche/analyse.py)
+// =====================================================================
+const HORIZON = 50;
+function rendementsAgreges(serie, debut, h) { const r = []; for (let i = debut + h; i < serie.length; i += h) r.push(Math.log(serie[i] / serie[i - h])); return r; }
+function moyenne(x) { let s = 0; for (const v of x) s += v; return s / x.length; }
+function acf(x, lag) { const m = moyenne(x); let num = 0, den = 0; for (let i = 0; i < x.length; i++) { den += (x[i] - m) ** 2; if (i + lag < x.length) num += (x[i] - m) * (x[i + lag] - m); } return den ? num / den : 0; }
+function kurtosis(x) { const m = moyenne(x); let s2 = 0, s4 = 0; for (const v of x) { const d = v - m; s2 += d * d; s4 += d ** 4; } s2 /= x.length; s4 /= x.length; return s2 ? s4 / (s2 * s2) - 3 : 0; }
+function correlation(x, y) { const mx = moyenne(x), my = moyenne(y); let a = 0, b = 0, c = 0; for (let i = 0; i < x.length; i++) { a += (x[i] - mx) * (y[i] - my); b += (x[i] - mx) ** 2; c += (y[i] - my) ** 2; } return b && c ? a / Math.sqrt(b * c) : 0; }
+
+// =====================================================================
+//  Dessin
+// =====================================================================
+let couleurs = {};
+function lireCouleurs() { const cs = getComputedStyle(document.documentElement); for (const k of ["ink", "muted", "line", "accent", "bid", "ask", "fond", "t-fond", "t-chart", "t-bruit", "t-mm", "surface", "surface-2", "bad", "ok"]) couleurs[k] = cs.getPropertyValue("--" + k).trim(); }
+const NOMS = { fond: "Fondamentalistes", chart: "Chartistes", bruit: "Bruiteurs", mm: "Teneurs de marché" };
+const COUL_TYPE = { fond: "t-fond", chart: "t-chart", bruit: "t-bruit", mm: "t-mm" };
+const POLICE_NUM = '11px "JetBrains Mono", ui-monospace, monospace';
+
+function preparer(canvas) {
+  const dpr = window.devicePixelRatio || 1, w = canvas.clientWidth, h = canvas.getAttribute("height") * 1;
+  if (canvas.width !== Math.round(w * dpr) || canvas._h !== h) { canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); canvas.style.height = h + "px"; canvas._h = h; }
+  const ctx = canvas.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+  return { ctx, w, h };
+}
+function graduations(min, max, n) {
+  const brut = (max - min) / n, p = Math.pow(10, Math.floor(Math.log10(brut))), f = brut / p;
+  const pas = (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * p, out = [];
+  for (let v = Math.ceil(min / pas) * pas; v <= max + 1e-9; v += pas) out.push(+v.toFixed(10));
+  return out;
+}
+function formatFr(v, d = 2) { return v.toLocaleString("fr-FR", { minimumFractionDigits: d, maximumFractionDigits: d }); }
+
+function dessinerPrix(m) {
+  const { ctx, w, h } = preparer(document.getElementById("g-prix"));
+  const n = m.prix.length, debut = fenetre ? Math.max(0, n - fenetre) : 0, span = Math.max(n - 1 - debut, 1);
+  const G = 52, D = 8, H = 10, B = 22, pw = w - G - D, ph = h - H - B;
+  // Sous-échantillonnage min/max par pixel pour garder les pics visibles.
+  const colonnes = Math.max(1, Math.floor(pw)), pasEch = span / colonnes;
+  let ymin = Infinity, ymax = -Infinity;
+  for (let i = debut; i < n; i++) { const a = m.prix[i], b = m.fond[i]; if (a < ymin) ymin = a; if (a > ymax) ymax = a; if (b < ymin) ymin = b; if (b > ymax) ymax = b; }
+  const marge = (ymax - ymin) * 0.08 || 1; ymin -= marge; ymax += marge;
+  const X = i => G + (i - debut) / span * pw, Y = v => H + (1 - (v - ymin) / (ymax - ymin)) * ph;
+  ctx.font = POLICE_NUM; ctx.fillStyle = couleurs.muted; ctx.strokeStyle = couleurs.line; ctx.lineWidth = 1;
+  for (const v of graduations(ymin, ymax, 5)) { const y = Math.round(Y(v)) + 0.5; ctx.beginPath(); ctx.moveTo(G, y); ctx.lineTo(w - D, y); ctx.stroke(); ctx.textAlign = "right"; ctx.textBaseline = "middle"; ctx.fillText(formatFr(v, v % 1 ? 1 : 0), G - 6, y); }
+  ctx.textAlign = "center"; ctx.textBaseline = "top";
+  for (const v of graduations(debut, n - 1, 6)) { if (v < debut) continue; ctx.fillText(v.toLocaleString("fr-FR"), X(v), h - B + 6); }
+  // News et événements
+  ctx.strokeStyle = couleurs.muted; ctx.globalAlpha = 0.25;
+  for (const e of m.news) if (e.t >= debut) { const x = Math.round(X(e.t)) + 0.5; ctx.beginPath(); ctx.moveTo(x, H); ctx.lineTo(x, H + ph); ctx.stroke(); }
+  ctx.globalAlpha = 1; ctx.strokeStyle = couleurs.accent; ctx.fillStyle = couleurs.accent; ctx.lineWidth = 1.5;
+  for (const e of m.evenements) if (e.t >= debut) { const x = Math.round(X(e.t)) + 0.5; ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.moveTo(x, H); ctx.lineTo(x, H + ph); ctx.stroke(); ctx.setLineDash([]); }
+  const tracer = (serie, coul, epais) => {
+    ctx.strokeStyle = coul; ctx.lineWidth = epais; ctx.beginPath();
+    for (let c = 0; c <= colonnes; c++) {
+      const i0 = Math.floor(debut + c * pasEch), i1 = Math.min(n - 1, Math.floor(debut + (c + 1) * pasEch));
+      let lo = Infinity, hi = -Infinity; for (let i = i0; i <= Math.max(i0, i1); i++) { const v = serie[i]; if (v < lo) lo = v; if (v > hi) hi = v; }
+      const x = G + c * (pw / colonnes);
+      if (c === 0) ctx.moveTo(x, Y(serie[i0])); ctx.lineTo(x, Y(lo)); ctx.lineTo(x, Y(hi));
+    }
+    ctx.stroke();
+  };
+  tracer(m.fond, couleurs.fond, 1.6); tracer(m.prix, couleurs.ink, 1.1);
+  const xf = X(n - 1), yf = Y(m.prix[n - 1]); ctx.fillStyle = couleurs.ink; ctx.beginPath(); ctx.arc(xf, yf, 3, 0, 7); ctx.fill();
+}
+
+function dessinerCarnet(m) {
+  const { ctx, w, h } = preparer(document.getElementById("g-carnet"));
+  const [bids, asks] = m.carnet.profondeur(m.t, 10), lignes = 20, lh = h / lignes;
+  const qmax = Math.max(1, ...bids.map(x => x[1]), ...asks.map(x => x[1]));
+  const colPrix = 74, barMax = w - colPrix - 52;
+  ctx.font = POLICE_NUM; ctx.textBaseline = "middle";
+  const ligne = (i, prix, q, coul) => {
+    const y = i * lh; ctx.fillStyle = coul; ctx.globalAlpha = 0.22; ctx.fillRect(colPrix, y + 2, q / qmax * barMax, lh - 4); ctx.globalAlpha = 1;
+    ctx.fillRect(colPrix, y + 2, 2, lh - 4);
+    ctx.fillStyle = coul; ctx.textAlign = "right"; ctx.fillText(formatFr(prix * m.tick), colPrix - 10, y + lh / 2);
+    ctx.fillStyle = couleurs.muted; ctx.textAlign = "left"; ctx.fillText(q, colPrix + q / qmax * barMax + 6, y + lh / 2);
+  };
+  asks.slice().reverse().forEach((x, k) => ligne(10 - asks.length + k, x[0], x[1], couleurs.ask));
+  bids.forEach((x, k) => ligne(10 + k, x[0], x[1], couleurs.bid));
+  ctx.strokeStyle = couleurs.line; ctx.beginPath(); ctx.moveTo(0, 10 * lh + 0.5); ctx.lineTo(w, 10 * lh + 0.5); ctx.stroke();
+  if (!bids.length && !asks.length) { ctx.fillStyle = couleurs.muted; ctx.textAlign = "center"; ctx.fillText("Carnet vide", w / 2, h / 2); }
+  const totB = bids.reduce((s, x) => s + x[1], 0), totA = asks.reduce((s, x) => s + x[1], 0);
+  document.getElementById("carnet-info").textContent = `profondeur : ${totB} à l'achat · ${totA} à la vente`;
+}
+
+function dessinerPerf(m) {
+  const { ctx, w, h } = preparer(document.getElementById("g-perf")), cm = m.cfg.marche;
+  const init = cm.cash_initial + cm.actions_initiales * cm.prix_initial, n = m.bilanT.length;
+  const series = {}; let lo = -1, hi = 1;
+  for (const k in m.bilan) { series[k] = m.bilan[k].map(v => 100 * (v / init - 1)); for (const v of series[k]) { if (v < lo) lo = v; if (v > hi) hi = v; } }
+  const bench = m.bilanT.map(t => 100 * ((cm.cash_initial + cm.actions_initiales * m.prix[t]) / init - 1)); for (const v of bench) { if (v < lo) lo = v; if (v > hi) hi = v; }
+  const G = 40, D = 6, H = 8, B = 8, pw = w - G - D, ph = h - H - B, marge = (hi - lo) * 0.08; lo -= marge; hi += marge;
+  const X = i => G + (n > 1 ? i / (n - 1) : 0) * pw, Y = v => H + (1 - (v - lo) / (hi - lo)) * ph;
+  ctx.font = POLICE_NUM; ctx.fillStyle = couleurs.muted; ctx.strokeStyle = couleurs.line; ctx.lineWidth = 1; ctx.textAlign = "right"; ctx.textBaseline = "middle";
+  for (const v of graduations(lo, hi, 4)) { const y = Math.round(Y(v)) + 0.5; ctx.beginPath(); ctx.moveTo(G, y); ctx.lineTo(w - D, y); ctx.stroke(); ctx.fillText((v > 0 ? "+" : "") + v + " %", G - 5, y); }
+  const tracer = (s, coul, epais, tirets) => { if (s.length < 2) return; ctx.strokeStyle = coul; ctx.lineWidth = epais; ctx.setLineDash(tirets || []); ctx.beginPath(); s.forEach((v, i) => i ? ctx.lineTo(X(i), Y(v)) : ctx.moveTo(X(i), Y(v))); ctx.stroke(); ctx.setLineDash([]); };
+  tracer(bench, couleurs.muted, 1, [3, 3]);
+  for (const k of ["bruit", "chart", "fond", "mm"]) tracer(series[k], couleurs[COUL_TYPE[k]], 1.8);
+  // Classement
+  const rang = Object.keys(series).filter(k => series[k].length).map(k => [k, series[k][series[k].length - 1]]).sort((a, b) => b[1] - a[1]);
+  const benchFin = bench.length ? bench[bench.length - 1] : 0;
+  document.getElementById("classement").innerHTML = rang.map(([k, v]) =>
+    `<div><span class="pastille" style="background:var(--${COUL_TYPE[k]})"></span><span>${NOMS[k]}</span><span class="num ${v >= 0 ? "hausse" : "baisse"}">${v >= 0 ? "+" : ""}${formatFr(v, 1)} %</span></div>`).join("")
+    + `<div><span class="pastille" style="border:1px dashed var(--muted)"></span><span style="color:var(--muted)">Benchmark (buy &amp; hold)</span><span class="num" style="color:var(--muted)">${benchFin >= 0 ? "+" : ""}${formatFr(benchFin, 1)} %</span></div>`;
+}
+
+function dessinerRendements(m) {
+  const { ctx, w, h } = preparer(document.getElementById("g-rend"));
+  const nb = Math.floor((m.prix.length - 1) / HORIZON), garde = Math.min(nb, 120), d0 = nb - garde;
+  const r = [], att = [];
+  for (let k = d0; k < nb; k++) { r.push(100 * Math.log(m.prix[(k + 1) * HORIZON] / m.prix[k * HORIZON])); let s = 0; for (let i = k * HORIZON + 1; i <= (k + 1) * HORIZON; i++) s += m.attention[i]; att.push(s / HORIZON); }
+  const G = 36, D = 30, H = 8, B = 8, pw = w - G - D, ph = h - H - B;
+  const amax = Math.max(0.5, ...r.map(Math.abs)) * 1.1, Y = v => H + ph / 2 - v / amax * ph / 2, bw = pw / 120;
+  ctx.font = POLICE_NUM; ctx.fillStyle = couleurs.muted; ctx.strokeStyle = couleurs.line; ctx.lineWidth = 1; ctx.textBaseline = "middle"; ctx.textAlign = "right";
+  for (const v of graduations(-amax, amax, 4)) { const y = Math.round(Y(v)) + 0.5; ctx.beginPath(); ctx.moveTo(G, y); ctx.lineTo(w - D, y); ctx.stroke(); ctx.fillText(v + "%", G - 4, y); }
+  r.forEach((v, i) => { ctx.fillStyle = couleurs.ink; const y0 = Y(0), y1 = Y(v); ctx.fillRect(G + i * bw + 0.5, Math.min(y0, y1), Math.max(bw - 1, 1), Math.max(Math.abs(y1 - y0), 1)); });
+  const amaxAtt = 3.2, YA = v => H + (1 - (v - 0.8) / (amaxAtt - 0.8)) * ph;
+  ctx.strokeStyle = couleurs["t-chart"]; ctx.lineWidth = 1.6; ctx.beginPath(); att.forEach((v, i) => { const x = G + i * bw + bw / 2; i ? ctx.lineTo(x, YA(v)) : ctx.moveTo(x, YA(v)); }); ctx.stroke();
+  ctx.fillStyle = couleurs["t-chart"]; ctx.textAlign = "left"; for (const v of [1, 2, 3]) ctx.fillText("×" + v, w - D + 4, YA(v));
+}
+
+let derniersFaits = "";
+function majFaits(m) {
+  const debut = 1000, r = rendementsAgreges(m.prix, debut, HORIZON);
+  const el = document.getElementById("faits");
+  if (r.length < 60) {
+    const manque = (60 - r.length) * HORIZON;
+    document.getElementById("faits-info").textContent = `encore ${manque.toLocaleString("fr-FR")} pas avant les premiers tests`;
+    const html = ["Queues épaisses", "Rendements imprévisibles", "Volatilité en grappes", "Volume ↔ volatilité", "Ancrage sur la valeur"].map(nom =>
+      `<div class="fait"><span class="etat attente">…</span><span><b>${nom}</b><small>données insuffisantes</small></span><span class="mesure">—</span></div>`).join("");
+    if (html !== derniersFaits) { el.innerHTML = html; derniersFaits = html; }
+    return;
+  }
+  const abs = r.map(Math.abs), vols = [];
+  for (let k = 0; k < r.length; k++) { let s = 0; for (let i = debut + k * HORIZON + 1; i <= debut + (k + 1) * HORIZON; i++) s += m.volume[i]; vols.push(s); }
+  const k = kurtosis(r); let acfMoy = 0, acfVol = 0; for (let l = 1; l <= 10; l++) { acfMoy += Math.abs(acf(r, l)); acfVol += acf(abs, l); } acfMoy /= 10; acfVol /= 10;
+  const cv = correlation(abs, vols); let ec = 0; for (let i = debut; i < m.prix.length; i++) ec += Math.abs(Math.log(m.prix[i] / m.fond[i])); ec /= (m.prix.length - debut);
+  const faits = [
+    ["Queues épaisses", "kurtosis excédentaire (loi normale : 0)", formatFr(k, 1), k > 1],
+    ["Rendements imprévisibles", "|autocorrélation| moyenne, retards 1 à 10", formatFr(acfMoy, 3), acfMoy < 0.12],
+    ["Volatilité en grappes", "autocorrélation des |rendements|", formatFr(acfVol, 3), acfVol > 0.05],
+    ["Volume ↔ volatilité", "corrélation |rendement| / volume", formatFr(cv, 2), cv > 0.1],
+    ["Ancrage sur la valeur", "écart moyen prix / valeur fondamentale", formatFr(100 * ec, 1) + " %", ec < 0.05],
+  ];
+  document.getElementById("faits-info").textContent = `sur ${r.length} rendements de ${HORIZON} pas · ${faits.filter(f => f[3]).length}/5 reproduits`;
+  const html = faits.map(([nom, sous, val, ok]) => `<div class="fait"><span class="etat ${ok ? "oui" : "non"}">${ok ? "OUI" : "NON"}</span><span><b>${nom}</b><small>${sous}</small></span><span class="mesure">${val}</span></div>`).join("");
+  if (html !== derniersFaits) { el.innerHTML = html; derniersFaits = html; }
+}
+
+function majBandeau(m) {
+  const p = m.prix[m.prix.length - 1], v = 100 * (p / m.cfg.marche.prix_initial - 1), s = m.spread[m.spread.length - 1];
+  document.getElementById("c-prix").textContent = formatFr(p) + " €";
+  const ev = document.getElementById("c-var"); ev.textContent = (v >= 0 ? "+" : "") + formatFr(v) + " %"; ev.className = "val " + (v >= 0 ? "hausse" : "baisse");
+  document.getElementById("c-fond").textContent = formatFr(m.fondamental) + " €";
+  document.getElementById("c-spread").textContent = isNaN(s) ? "carnet vide" : formatFr(s) + " €";
+  document.getElementById("c-t").textContent = m.t.toLocaleString("fr-FR");
+  const st = m.stress(), reg = document.getElementById("c-regime");
+  const etat = st >= 3 ? ["crise", "Crise"] : st >= 1.5 ? ["agite", "Agité"] : ["calme", "Calme"];
+  reg.className = "regime " + etat[0]; reg.textContent = etat[1] + " · stress " + formatFr(st, 1);
+}
+
+// Journal de marché : événements provoqués, news fortes, changements de régime.
+const journal = [];
+let regimePrecedent = "calme", nNewsLu = 0;
+function noter(t, texte, classe) { journal.unshift({ t, texte, classe }); if (journal.length > 60) journal.pop(); afficherJournal(); }
+function afficherJournal() { document.getElementById("journal").innerHTML = journal.map(e => `<li class="${e.classe || ""}"><span class="t">${e.t.toLocaleString("fr-FR")}</span><span>${e.texte}</span></li>`).join(""); }
+function surveiller(m) {
+  for (; nNewsLu < m.news.length; nNewsLu++) { const e = m.news[nNewsLu]; if (Math.abs(e.n) > 0.015) noter(e.t, `<b>News ${e.n > 0 ? "positive" : "négative"}</b> : la valeur fondamentale bouge de ${e.n > 0 ? "+" : ""}${formatFr(100 * e.n, 1)} %.`, e.n > 0 ? "vert" : "rouge"); }
+  const st = m.stress(), reg = st >= 3 ? "crise" : st >= 1.5 ? "agite" : "calme";
+  if (reg !== regimePrecedent) {
+    if (reg === "crise") noter(m.t, `<b>Le marché entre en crise</b> : la volatilité vaut ${formatFr(st, 1)}× la normale, et les chartistes tradent ${formatFr(m.multiplicateur, 1)}× plus.`, "rouge");
+    else if (reg === "calme" && regimePrecedent !== "calme") noter(m.t, "<b>Retour au calme</b> : la volatilité est revenue à la normale.", "vert");
+    regimePrecedent = reg;
+  }
+}
+
+// =====================================================================
+//  Boucle et commandes
+// =====================================================================
+let marche, enCours = true, vitesse = 20, fenetre = 8000, image = 0, graine = 42;
+const reduit = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function nouvelleSeance(g) {
+  graine = g; marche = new Marche(CONFIG, graine); journal.length = 0; regimePrecedent = "calme"; nNewsLu = 0;
+  for (let i = 0; i < 6000; i++) marche.pas();   // préchauffe : le marché est déjà ouvert à l'affichage
+  surveiller(marche);
+  noter(marche.t, `<b>Ouverture de la séance</b> (univers n° ${graine}). Les 6 000 premiers pas ont déjà été joués.`, "ambre");
+  dessinerTout(true);
+}
+function dessinerTout(complet) {
+  majBandeau(marche); dessinerPrix(marche); dessinerCarnet(marche); dessinerRendements(marche);
+  if (complet || image % 15 === 0) { dessinerPerf(marche); majFaits(marche); }
+}
+function boucle() {
+  if (enCours) { for (let i = 0; i < vitesse; i++) marche.pas(); surveiller(marche); image++; dessinerTout(false); }
+  requestAnimationFrame(boucle);
+}
+
+const bLecture = document.getElementById("b-lecture");
+function majLecture() { bLecture.textContent = enCours ? "Pause" : "Reprendre"; }
+bLecture.addEventListener("click", () => { enCours = !enCours; majLecture(); });
+document.getElementById("b-reset").addEventListener("click", () => nouvelleSeance(Math.floor(Math.random() * 1e6)));
+document.querySelectorAll("#vitesses button").forEach(b => b.addEventListener("click", () => {
+  vitesse = +b.dataset.v; document.querySelectorAll("#vitesses button").forEach(x => x.setAttribute("aria-pressed", x === b)); }));
+document.querySelectorAll("#fenetres button").forEach(b => b.addEventListener("click", () => {
+  fenetre = +b.dataset.f; document.querySelectorAll("#fenetres button").forEach(x => x.setAttribute("aria-pressed", x === b)); dessinerPrix(marche); }));
+
+document.getElementById("e-liquidation").addEventListener("click", () => { marche.lancerScenario(VENTE, 4000, "Liquidation forcée"); noter(marche.t, "<b>Liquidation forcée</b> : un fonds commence à vendre 4 000 titres au marché, 40 par pas.", "rouge"); });
+document.getElementById("e-achat").addEventListener("click", () => { marche.lancerScenario(ACHAT, 4000, "Raid acheteur"); noter(marche.t, "<b>Raid acheteur</b> : un investisseur ramasse 4 000 titres au marché, 40 par pas.", "vert"); });
+document.getElementById("e-news-moins").addEventListener("click", () => { marche.chocFondamental(Math.log(0.92), "Avertissement"); noter(marche.t, "<b>Avertissement sur résultats</b> : la valeur fondamentale chute de 8 %.", "rouge"); });
+document.getElementById("e-news-plus").addEventListener("click", () => { marche.chocFondamental(Math.log(1.08), "Résultats record"); noter(marche.t, "<b>Résultats record</b> : la valeur fondamentale bondit de 8 %.", "vert"); });
+const bMM = document.getElementById("e-mm");
+bMM.addEventListener("click", () => {
+  R.greveMM = !R.greveMM; bMM.setAttribute("aria-pressed", R.greveMM);
+  bMM.firstChild.textContent = R.greveMM ? "Fin de la grève" : "Grève des teneurs de marché";
+  marche.evenements.push({ t: marche.t });
+  noter(marche.t, R.greveMM ? "<b>Grève des teneurs de marché</b> : plus aucune cotation continue." : "<b>Les teneurs de marché reprennent</b> leurs cotations.", "ambre");
+});
+
+const curseurs = [
+  ["r-act-chart", "o-act-chart", v => { R.actChart = v; }, v => "×" + formatFr(v, 1)],
+  ["r-attention", "o-attention", v => { R.attention = v; }, v => formatFr(v, 1)],
+  ["r-act-fond", "o-act-fond", v => { R.actFond = v; }, v => "×" + formatFr(v, 1)],
+  ["r-react", "o-react", v => { R.react = v; }, v => formatFr(v, 1)],
+  ["r-news", "o-news", v => { R.news = v; }, v => "×" + formatFr(v, 1)],
+  ["r-bande", "o-bande", v => { R.bande = v / 100; }, v => "±" + formatFr(v, 1) + " %"],
+];
+for (const [id, out, appliquer, format] of curseurs) {
+  const input = document.getElementById(id), o = document.getElementById(out);
+  const maj = () => { const v = +input.value; appliquer(v); o.textContent = format(v); };
+  input.addEventListener("input", maj); maj();
+}
+
+lireCouleurs();
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { lireCouleurs(); dessinerTout(true); });
+new MutationObserver(() => { lireCouleurs(); dessinerTout(true); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+window.addEventListener("resize", () => dessinerTout(true));
+if (reduit) enCours = false;
+majLecture();
+nouvelleSeance(42);
+requestAnimationFrame(boucle);
+</script>
