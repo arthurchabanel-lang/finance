@@ -1,0 +1,75 @@
+# =====================================================================
+#  PARAMÈTRES DU MARCHÉ ARTIFICIEL
+#  Modifie les valeurs ci-dessous, puis relance :  python lancer.py
+# =====================================================================
+
+[simulation]
+nombre_de_pas = 30000
+graine = 42                # même graine = même simulation (reproductible)
+
+[marche]
+tick = 0.01                # pas de cotation (€)
+prix_initial = 100.0
+cash_initial = 10000.0     # par agent
+actions_initiales = 100    # par agent : c'est aussi leur position « neutre » (benchmark)
+credit_max = 10000.0       # découvert autorisé par agent (achat sur marge)
+fenetre_volatilite = 50    # pas utilisés pour mesurer la volatilité récente
+memoire_volatilite = 2000  # demi-vie (pas) de la volatilité « normale » de référence
+frequence_bilan = 100      # tous les combien de pas on photographie les richesses
+bande_prix = 0.02          # un ordre limite ne peut s'écarter de plus de 2 % du prix
+
+[fondamental]
+# La « vraie » valeur de l'entreprise : marche aléatoire + news ponctuelles.
+volatilite = 0.0003        # bruit par pas (log)
+proba_news = 0.001         # probabilité d'une news à chaque pas
+amplitude_news = 0.01      # taille typique d'une news (1 %)
+
+# ---------------------------------------------------------------------
+#  LES AGENTS
+# ---------------------------------------------------------------------
+
+# position_max = surpondération / sous-pondération maximale vs le benchmark (en titres)
+# taille_max_ordre = les agents découpent leurs ordres (exécution progressive)
+
+# activite = nombre moyen d'agents de ce type qui agissent à chaque pas
+[agents.fondamentalistes]
+nombre = 100
+activite = 1.0
+reactivite_ecart = 1.0         # à un écart de 3 % (échelle), ils tradent 2x plus souvent
+position_max = 100
+dispersion_estimation = 0.01   # désaccord entre analystes sur la valeur (1 %)
+echelle_ecart = 0.03           # sous-évaluation qui déclenche ~3/4 de la surpondération max
+agressivite = [0.0, 0.5]       # fraction de l'écart qu'ils acceptent de payer
+taille_max_ordre = 15
+duree_ordre = 200              # durée de vie des ordres (pas)
+
+[agents.chartistes]
+nombre = 100
+activite = 1.0
+attention = 1.0                # quand la volatilité double, ils tradent 2x plus souvent
+attention_max = 3.0            # plafond de ce multiplicateur
+position_max = 100
+fenetre_min = 10               # horizon d'analyse de la tendance (pas)
+fenetre_max = 200
+echelle_tendance = 0.03        # tendance qui déclenche ~3/4 de l'exposition max
+proba_ordre_marche = 0.3       # part d'ordres au marché (impatience)
+taille_max_ordre = 10
+duree_ordre = 50
+
+[agents.bruiteurs]
+nombre = 200
+activite = 2.0
+position_max = 100
+proba_ordre_marche = 0.2
+dispersion_prix = 0.002        # éloignement typique de leurs ordres limites
+taille_ordre = 5
+duree_ordre = 100
+
+[agents.teneurs_de_marche]
+nombre = 2
+position_max = 500             # stock maximal (en titres)
+demi_spread_min = 0.0005       # demi-fourchette minimale (5 pb)
+demi_spread_max = 0.01         # demi-fourchette maximale (1 %)
+aversion_volatilite = 2.0      # élargissement de la fourchette quand ça s'agite
+skew_inventaire = 0.005        # décalage des cotations à stock maximal (0,5 %)
+taille_cotation = 30
