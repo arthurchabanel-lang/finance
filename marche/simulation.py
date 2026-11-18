@@ -126,7 +126,8 @@ class Marche:
     def proba_fondamentaliste(self) -> float:
         """Probabilité logit (Brock et Hommes) de jouer la stratégie fondamentaliste."""
         ref = self._var[self._demi_vie_ref]
-        if not ref:
+        # Période d'observation : pas d'apprentissage tant que les scores n'ont pas d'historique.
+        if not ref or self.t < 1.0 / self._alpha_score:
             return 0.5
         # Écart de score en « t-statistique » : rapporté à la volatilité et à la longueur de la
         # mémoire. d = 2 signifie qu'une stratégie bat nettement l'autre ces derniers temps.

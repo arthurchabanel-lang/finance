@@ -97,6 +97,8 @@ def _evolution(args):
 
 def ic(v):
     v = np.asarray([x for x in v if not math.isnan(x)])
+    if len(v) < 2:
+        return math.nan, math.nan, math.nan
     d = 1.96 * v.std(ddof=1) / math.sqrt(len(v))
     return v.mean(), v.mean() - d, v.mean() + d
 
@@ -137,7 +139,8 @@ def main() -> None:
     prix, fond, pc = next(r["serie"] for i, g, r in bh if i == 5.0)
     ax.plot(fond, color="#9aa1ad", lw=1.2, label="Valeur fondamentale")
     ax.plot(prix, color="#22252b", lw=0.8, label="Prix")
-    ax.set_ylabel("€")
+    ax.set_ylabel("€ (échelle logarithmique)")
+    ax.set_yscale("log")
     ax2 = ax.twinx()
     ax2.fill_between(np.arange(len(pc)), 0, pc, color="#db6a21", alpha=0.18, label="Part en mode chartiste")
     ax2.set_ylim(0, 1); ax2.set_ylabel("part des adaptatifs en mode chartiste", color="#db6a21")
@@ -187,7 +190,7 @@ def main() -> None:
          "|---|---|---|---|---|---|---|"]
     for I in INTENSITES:
         R = [r for i, g, r in bh if i == I]
-        f = lambda c, fmt: fmt.format(ic([r[c] for r in R])[0])
+        f = lambda c, fmt: "—" if math.isnan(ic([r[c] for r in R])[0]) else fmt.format(ic([r[c] for r in R])[0])
         L.append(f"| {I} | {f('part_chartiste', '{:.0%}')} | {f('volatilite', '{:.2%}')} | "
                  f"{f('kurtosis', '{:.1f}')} | {f('inefficience', '{:.2%}')} | {f('chute_max', '{:.1%}')} | "
                  f"{f('corr_part_vol', '{:+.2f}')} |")

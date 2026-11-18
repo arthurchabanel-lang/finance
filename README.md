@@ -75,6 +75,26 @@ Ce script fait tourner 20 univers indépendants et confronte le simulateur à 11
 stylisés de la littérature, avec intervalles de confiance. Le dernier rapport est dans
 [`docs/validation.md`](docs/validation.md).
 
+## Phase 4 : expériences de régulation
+
+```bash
+python experimenter.py
+```
+
+Ce script compare cinq politiques (taxe, coupe-circuit, interdiction de la vente à découvert,
+deux formes de limite de levier) à la référence, sur les mêmes 20 univers, avec un stress
+test de liquidation forcée. Voir [`docs/conclusions-phase4.md`](docs/conclusions-phase4.md).
+
+## Phase 5 : des agents qui apprennent
+
+```bash
+python apprendre.py
+```
+
+Ce script étudie des agents adaptatifs qui choisissent leur stratégie selon ce qui rapporte
+(Brock et Hommes), et une évolution darwinienne des paramètres des stratégies. Voir
+[`docs/conclusions-phase5.md`](docs/conclusions-phase5.md).
+
 ## Structure du code
 
 ```
@@ -103,7 +123,4 @@ reproduits, avec des intervalles de confiance qui excluent 0.
 
 ## Limites connues
 
-- **Queues trop épaisses** : indice de Hill d'environ 1,8, contre environ 3 sur les actions réelles
-- **Mémoire de la volatilité encore un peu courte** : β ≈ 0,75, contre 0,2 à 0,4 sur les marchés réels
-- **Appels de marge sur les fondamentalistes** : s'ils y sont aussi soumis, le marché devient
-  instable (limites de l'arbitrage, Shleifer et Vishny 1997)
+Voir [`docs/AVANCEMENT.md`](docs/AVANCEMENT.md) (points ouverts du modèle).
