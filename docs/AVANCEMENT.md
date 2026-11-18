@@ -1,12 +1,14 @@
 # Où en est le projet
 
-*Dernière mise à jour : 18/11/2026.*
+*Dernière mise à jour : 18/11/2026. Les six phases sont terminées.*
 
 ## Fait
 
 - **Phase 1** : moteur Python. Carnet d'ordres, agents, faits stylisés, tableau de bord (`python lancer.py`).
 - **Phase 2** : salle des marchés interactive dans le navigateur (`web/salle-des-marches.html`).
-  Elle tourne encore avec le modèle de la phase 1 : elle sera mise à jour à la fin.
+  Elle tourne avec le modèle final et propose un panneau de régulation (taxe, coupe-circuit,
+  vente à découvert, appels de marge). Parité vérifiée avec le moteur Python sur 20 univers :
+  toutes les statistiques tombent dans les mêmes intervalles de confiance.
 - **Phase 3** : validation Monte-Carlo sur 20 univers (`python valider.py`, rapport
   [`validation.md`](validation.md)). Mécanismes ajoutés : horizons hétérogènes, aversion aux
   pertes, appels de marge.
@@ -23,8 +25,11 @@
 
 ## Reste à faire
 
-1. Mettre à jour la salle des marchés (JavaScript) avec le modèle final et vérifier la
-   parité avec le moteur Python.
+Les six phases sont terminées. Pistes pour aller plus loin :
+- fixing de réouverture après un coupe-circuit (enchère) ;
+- agents qui anticipent les ventes des autres (course à la sortie) dans le modèle multi-actifs ;
+- apprentissage par renforcement libre (nouvelles stratégies, pas seulement un choix entre deux) ;
+- calibration sur des données de marché réelles (intrajournalières).
 
 ## Points ouverts du modèle
 

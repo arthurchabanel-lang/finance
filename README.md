@@ -61,9 +61,11 @@ Robustesse avec la configuration actuelle : 34 critères réussis sur 36, sur 6 
 
 ## Phase 2 : la salle des marchés
 
-`web/salle-des-marches.html` est le même moteur, porté en JavaScript. Le marché tourne en
-direct dans le navigateur, avec des curseurs de comportement et des crises à provoquer.
-Il suffit d'ouvrir le fichier dans un navigateur.
+`web/salle-des-marches.html` porte le même moteur (modèle final) en JavaScript. Le marché
+tourne en direct dans le navigateur, avec des curseurs de comportement, des crises à
+provoquer et un panneau de régulation. Il suffit d'ouvrir le fichier dans un navigateur.
+Les statistiques des deux moteurs ont été comparées sur 20 univers : elles tombent dans les
+mêmes intervalles de confiance.
 
 ## Phase 3 : validation Monte-Carlo
 

@@ -145,12 +145,13 @@ canvas { display: block; width: 100%; }
   <header class="bandeau">
     <div class="marque">
       <h1>Salle des marchés</h1>
-      <p>402 agents échangent un titre fictif, ACME, sur un carnet d'ordres en continu. Le marché tourne en direct dans votre navigateur.</p>
+      <p>402 agents échangent un titre fictif, ACME, sur un carnet d'ordres en continu, dont 100 hedge funds endettés soumis aux appels de marge. Le marché tourne en direct dans votre navigateur.</p>
     </div>
     <div class="cote"><span class="lib">ACME · dernier</span><span class="val grand" id="c-prix">—</span></div>
     <div class="cote"><span class="lib">Var. depuis l'ouverture</span><span class="val" id="c-var">—</span></div>
     <div class="cote"><span class="lib">Valeur fondamentale</span><span class="val" id="c-fond">—</span></div>
     <div class="cote"><span class="lib">Fourchette</span><span class="val" id="c-spread">—</span></div>
+    <div class="cote"><span class="lib">Appels de marge (1 000 pas)</span><span class="val" id="c-appels">—</span></div>
     <div class="cote"><span class="lib">Pas de temps</span><span class="val" id="c-t">—</span></div>
     <span class="regime calme" id="c-regime">Calme</span>
   </header>
@@ -192,8 +193,8 @@ canvas { display: block; width: 100%; }
         </div>
         <div class="reglage">
           <label for="r-attention">Attention à l'agitation <output id="o-attention"></output></label>
-          <input type="range" id="r-attention" min="0" max="4" step="0.1" value="1">
-          <p>À 0, ils tradent au même rythme quel que soit le marché. Plus elle est haute, plus ils se ruent quand la volatilité monte.</p>
+          <input type="range" id="r-attention" min="0" max="4" step="0.1" value="2">
+          <p>À 0, ils tradent au même rythme quel que soit le marché. Plus elle est haute, plus ils se ruent quand la volatilité monte, surtout à la baisse.</p>
         </div>
         <div class="groupe-titre"><span class="pastille" style="background:var(--t-fond)"></span>Fondamentalistes</div>
         <div class="reglage">
@@ -214,6 +215,20 @@ canvas { display: block; width: 100%; }
           <label for="r-bande">Bande de prix <output id="o-bande"></output></label>
           <input type="range" id="r-bande" min="0.5" max="10" step="0.5" value="2">
           <p>L'écart maximal entre un ordre limite et le prix de marché.</p>
+        </div>
+      </section>
+
+      <section class="panneau">
+        <h2>Régulation <small>effet immédiat</small></h2>
+        <div class="reglage">
+          <label for="r-taxe">Taxe sur les transactions <output id="o-taxe"></output></label>
+          <input type="range" id="r-taxe" min="0" max="0.5" step="0.05" value="0">
+          <p>Payée par l'acheteur et le vendeur, sur le montant échangé.</p>
+        </div>
+        <div class="chocs" style="margin-top:6px">
+          <button class="choc ambre" id="b-coupe" type="button" aria-pressed="false">Coupe-circuit<span>Cotation suspendue 100 pas si le prix bouge de plus de 3 % en 200 pas.</span></button>
+          <button class="choc ambre" id="b-vad" type="button" aria-pressed="false">Interdire la vente à découvert<span>Aucun agent ne peut détenir moins de 0 titre (sauf les teneurs de marché).</span></button>
+          <button class="choc ambre" id="b-marge" type="button" aria-pressed="true">Appels de marge actifs<span>Un hedge fund endetté qui perd 5 % doit vendre la moitié de sa position.</span></button>
         </div>
       </section>
     </aside>
@@ -275,8 +290,9 @@ canvas { display: block; width: 100%; }
         <section class="panneau">
           <h2>Comment lire ce marché</h2>
           <p class="note">Les <b style="color:var(--t-fond)">fondamentalistes</b> parient sur un retour du prix vers la valeur qu'ils estiment. Les <b style="color:var(--t-chart)">chartistes</b> suivent la tendance, et tradent davantage quand le marché s'agite. Les <b style="color:var(--t-bruit)">bruiteurs</b> passent des ordres au hasard, et les <b style="color:var(--t-mm)">teneurs de marché</b> cotent en continu en gérant leur stock.</p>
-          <p class="note" style="margin-top:8px">Personne n'a programmé de krach. Les secousses naissent de l'interaction entre ces stratégies. Essayez par exemple une grève des teneurs de marché suivie d'une liquidation forcée, ou mettez la réactivité des fondamentalistes à 0 et l'attention des chartistes à 4.</p>
-          <p class="note" style="margin-top:8px">Moteur identique au simulateur Python (phase 1) : carnet d'ordres prix-temps, tick de 0,01 €, ordres limites avec durée de vie, positions bornées par rapport à un benchmark.</p>
+          <p class="note" style="margin-top:8px">Les chartistes sont des hedge funds endettés. S'ils perdent 5 % de leur capital, leur courtier exige qu'ils vendent la moitié de leur position : ces ventes forcées amplifient les baisses. Un fonds qui perd 75 % de son capital fait faillite et un nouveau prend sa place.</p>
+          <p class="note" style="margin-top:8px">Personne n'a programmé de krach. Les secousses naissent de l'interaction entre ces stratégies. Essayez une liquidation forcée avec puis sans appels de marge, ou une liquidation forcée avec la vente à découvert interdite.</p>
+          <p class="note" style="margin-top:8px">Moteur identique au simulateur Python (modèle final, phases 1 à 5) : carnet d'ordres prix-temps, tick de 0,01 €, ordres limites avec durée de vie.</p>
         </section>
       </div>
     </main>
@@ -290,21 +306,27 @@ canvas { display: block; width: 100%; }
 // =====================================================================
 const CONFIG = {
   marche: { tick: 0.01, prix_initial: 100, cash_initial: 10000, actions_initiales: 100, credit_max: 10000,
-            fenetre_volatilite: 50, memoire_volatilite: 2000, frequence_bilan: 100, bande_prix: 0.02 },
+            fenetre_volatilite: 50, memoire_volatilite: 10000, frequence_bilan: 100, seuil_faillite: 0.25 },
   fondamental: { volatilite: 0.0003, proba_news: 0.001, amplitude_news: 0.01 },
   agents: {
     fondamentalistes: { nombre: 100, activite: 1.0, reactivite_ecart: 1.0, position_max: 100, dispersion_estimation: 0.01,
                         echelle_ecart: 0.03, agressivite: [0.0, 0.5], taille_max_ordre: 15, duree_ordre: 200 },
-    chartistes: { nombre: 100, activite: 1.0, attention: 1.0, attention_max: 3.0, position_max: 100, fenetre_min: 10,
+    chartistes: { nombre: 100, cash_initial: 0, activite: 1.0, attention: 2.0, attention_max: 4.0,
+                  horizons_attention: [25, 250, 2500], aversion_pertes: 1.0, position_max: 150, fenetre_min: 10,
                   fenetre_max: 200, echelle_tendance: 0.03, proba_ordre_marche: 0.3, taille_max_ordre: 10, duree_ordre: 50 },
-    bruiteurs: { nombre: 200, activite: 2.0, position_max: 100, proba_ordre_marche: 0.2, dispersion_prix: 0.002,
-                 taille_ordre: 5, duree_ordre: 100 },
+    bruiteurs: { nombre: 200, activite: 2.0, position_max: 100, rappel_allocation: 0.5, proba_ordre_marche: 0.2,
+                 dispersion_prix: 0.002, taille_ordre: 5, duree_ordre: 100 },
     teneurs_de_marche: { nombre: 2, position_max: 500, demi_spread_min: 0.0005, demi_spread_max: 0.01,
                          aversion_volatilite: 2.0, skew_inventaire: 0.005, taille_cotation: 30 },
   },
+  marge: { seuil_perte: 0.05, reduction: 0.5, tranche_liquidation: 20, duree_suspension: 300,
+           demi_vie_reprise: 2000, reduction_cible_max: 0.5, frequence_controle: 5 },
+  acheteur_strategique: { decote: 0.5, titres_par_pas: 50 },
+  regulation: { sensibilite_bruiteurs: 0.001, coupe_circuit_seuil: 0.03, coupe_circuit_fenetre: 200, coupe_circuit_duree: 100 },
 };
-// Réglages modifiables en direct (multiplicateurs appliqués à la config)
-const R = { actChart: 1, attention: 1, actFond: 1, react: 1, news: 1, bande: 0.02, greveMM: false };
+// Réglages modifiables en direct
+const R = { actChart: 1, attention: 2, actFond: 1, react: 1, news: 1, bande: 0.02, greveMM: false,
+            taxe: 0, coupeCircuit: false, interdictionVAD: false, marge: true };
 
 // =====================================================================
 //  Aléatoire reproductible
@@ -321,6 +343,7 @@ class Alea {
   }
   uniforme(a, b) { return a + (b - a) * this.random(); }
   entier(a, bExclu) { return a + Math.floor(this.random() * (bExclu - a)); }
+  exponentielle(moyenne) { return -Math.log(1 - this.random()) * moyenne; }
   poisson(l) {
     if (l <= 0) return 0;
     if (l > 30) return Math.max(0, Math.round(l + Math.sqrt(l) * this.normal()));
@@ -396,15 +419,19 @@ class Carnet {
 // =====================================================================
 class Agent {
   constructor(id, p, rng, cm) {
-    this.id = id; this.cash = cm.cash_initial; this.actions = cm.actions_initiales; this.neutre = cm.actions_initiales;
-    this.positionMax = p.position_max; this.creditMax = cm.credit_max; this.rng = rng; this.ordres = [];
+    this.id = id; this.cash = p.cash_initial ?? cm.cash_initial; this.actions = cm.actions_initiales;
+    this.neutre = cm.actions_initiales; this.neutreInitial = cm.actions_initiales;
+    this.positionMax = p.position_max; this.creditMax = p.credit_max ?? cm.credit_max; this.rng = rng; this.ordres = [];
+    this.plancherReglementaire = -Infinity; this.aLiquider = 0; this.suspenduJusqua = -1;
+    this.capitalInitial = this.plusHaut = this.cash + this.actions * cm.prix_initial;
   }
   richesse(prix) { return this.cash + this.actions * prix; }
+  get plancher() { return Math.max(this.neutre - this.positionMax, this.plancherReglementaire); }
   autorise(cote, q, prix) {
     if (cote === ACHAT) {
       q = Math.min(q, this.neutre + this.positionMax - this.actions);
       if (isFinite(this.creditMax)) q = Math.min(q, Math.floor(Math.max(this.cash + this.creditMax, 0) / Math.max(prix, 1e-9)));
-    } else q = Math.min(q, this.actions - (this.neutre - this.positionMax));
+    } else q = Math.min(q, this.actions - this.plancher);
     return Math.max(Math.floor(q), 0);
   }
   annulerTout(m) { for (const id of this.ordres) m.carnet.annuler(id); this.ordres.length = 0; }
@@ -416,22 +443,28 @@ class Agent {
 }
 class Fondamentaliste extends Agent {
   constructor(id, p, rng, cm) { super(id, p, rng, cm); this.type = "fond";
-    this.biais = rng.normal(0, p.dispersion_estimation); this.echelle = p.echelle_ecart * rng.uniforme(0.5, 1.5);
+    this.biais = rng.normal(0, p.dispersion_estimation);
+    this.expositionMaxEuros = this.positionMax * 100;   // un gérant value raisonne en euros
+    this.echelle = p.echelle_ecart * rng.uniforme(0.5, 1.5);
     this.agressivite = rng.uniforme(...p.agressivite); this.tailleMax = p.taille_max_ordre; this.duree = p.duree_ordre; }
   agir(m) {
     this.annulerTout(m);
     const prix = m.prixReference(), ecart = Math.log(m.fondamental * Math.exp(this.biais) / prix);
+    this.positionMax = this.expositionMaxEuros / prix;
+    if (Math.abs(ecart) < m.zoneMorte) return;
     let [cote, q] = this.viser(ecart / this.echelle); q = this.autorise(cote, q, prix);
     m.envoyerLimite(this, cote, prix * Math.exp(this.agressivite * ecart), q, this.duree);
   }
 }
 class Chartiste extends Agent {
   constructor(id, p, rng, cm) { super(id, p, rng, cm); this.type = "chart";
-    this.fenetre = rng.entier(p.fenetre_min, p.fenetre_max + 1); this.echelle = p.echelle_tendance * rng.uniforme(0.5, 1.5);
+    this.fenetre = rng.entier(p.fenetre_min, p.fenetre_max + 1); this.horizon = 0;
+    this.echelle = p.echelle_tendance * rng.uniforme(0.5, 1.5);
     this.probaMarche = p.proba_ordre_marche; this.tailleMax = p.taille_max_ordre; this.duree = p.duree_ordre; }
   agir(m) {
     const tendance = m.rendement(this.fenetre); if (tendance === null) return;
     this.annulerTout(m);
+    if (Math.abs(tendance) < m.zoneMorte) return;
     const prix = m.prixReference();
     let [cote, q] = this.viser(tendance / this.echelle); q = this.autorise(cote, q, prix);
     if (this.rng.random() < this.probaMarche) m.envoyerMarche(this, cote, q);
@@ -439,10 +472,13 @@ class Chartiste extends Agent {
   }
 }
 class Bruiteur extends Agent {
-  constructor(id, p, rng, cm) { super(id, p, rng, cm); this.type = "bruit";
+  constructor(id, p, rng, cm) { super(id, p, rng, cm); this.type = "bruit"; this.rappel = p.rappel_allocation;
     this.probaMarche = p.proba_ordre_marche; this.dispersion = p.dispersion_prix; this.taille = p.taille_ordre; this.duree = p.duree_ordre; }
   agir(m) {
-    const prix = m.prixReference(), cote = this.rng.random() < 0.5 ? ACHAT : VENTE;
+    const prix = m.prixReference();
+    // Direction aléatoire, mais penchant vers l'allocation de long terme (rééquilibrage).
+    const pAchat = Math.min(Math.max(0.5 + this.rappel * (this.neutre - this.actions) / this.positionMax, 0.05), 0.95);
+    const cote = this.rng.random() < pAchat ? ACHAT : VENTE;
     const q = this.autorise(cote, this.rng.entier(1, this.taille + 1), prix);
     if (this.rng.random() < this.probaMarche) m.envoyerMarche(this, cote, q);
     else m.envoyerLimite(this, cote, prix * Math.exp(-cote * this.rng.normal(this.dispersion, this.dispersion)), q, this.duree);
@@ -452,16 +488,16 @@ class TeneurDeMarche extends Agent {
   constructor(id, p, rng, cm) { super(id, p, rng, cm); this.type = "mm"; this.p = p; this.creditMax = Infinity; }
   agir(m) {
     const p = this.p, prix = m.referenceTeneurs, vol = m.volatiliteRecente();
-    const ds = Math.min(Math.max(p.demi_spread_min, p.aversion_volatilite * vol), p.demi_spread_max);
+    const ds = Math.min(Math.max(p.demi_spread_min + m.taxe, p.aversion_volatilite * vol), p.demi_spread_max);
     const centre = prix * Math.exp(-p.skew_inventaire * (this.actions - this.neutre) / this.positionMax);
     const bid = centre * Math.exp(-ds), ask = centre * Math.exp(ds);
     m.envoyerLimite(this, ACHAT, bid, this.autorise(ACHAT, p.taille_cotation, bid), 1);
     m.envoyerLimite(this, VENTE, ask, this.autorise(VENTE, p.taille_cotation, ask), 1);
   }
 }
-// Acteur extérieur des scénarios (fonds en liquidation, raid acheteur) : hors classement.
+// Acteur extérieur (fonds en liquidation, raid acheteur, acheteur stratégique) : hors classement.
 class Externe extends Agent {
-  constructor(id, cm) { super(id, { position_max: 1e12 }, null, cm); this.type = "externe"; this.creditMax = Infinity; }
+  constructor(id, cm, type) { super(id, { position_max: 1e12, cash_initial: 0 }, null, cm); this.type = type; this.creditMax = Infinity; this.actions = 0; this.neutre = 0; }
 }
 
 // =====================================================================
@@ -471,20 +507,39 @@ class Marche {
   constructor(cfg, graine) {
     this.cfg = cfg; this.rng = new Alea(graine); const cm = cfg.marche;
     this.tick = cm.tick; this.carnet = new Carnet(); this.t = 0;
-    this.fondamental = cm.prix_initial; this.dernierPrix = cm.prix_initial;
-    this.alphaVol = 1 - Math.pow(0.5, 1 / cm.memoire_volatilite); this.varLongue = null; this.volCache = [-1, 0];
+    this.fondamental = cm.prix_initial; this.dernierPrix = cm.prix_initial; this.volCache = [-1, 0];
+    this.horizons = cfg.agents.chartistes.horizons_attention; this.hRef = cm.memoire_volatilite;
+    this.vars = new Map([[this.hRef, null], ...this.horizons.map(h => [h, null])]);
+    this.emaR = new Map(this.horizons.map(h => [h, 0]));
     this.prix = [cm.prix_initial]; this.fond = [cm.prix_initial]; this.spread = [NaN]; this.volume = [0]; this.attention = [1];
-    this.news = []; this.evenements = []; this.bilanT = []; this.bilan = { fond: [], chart: [], bruit: [], mm: [] };
+    this.news = []; this.evenements = []; this.appels = []; this.faillites = []; this.arrets = [];
+    this.bilanT = []; this.bilan = { fond: [], chart: [], bruit: [], mm: [] };
     this.volPas = 0; this.multiplicateur = 1; this.scenario = null; this.referenceTeneurs = cm.prix_initial;
+    this.arretJusqua = -1; this.capitalInjecte = 0;
     this.agents = []; const classes = { fondamentalistes: Fondamentaliste, chartistes: Chartiste, bruiteurs: Bruiteur, teneurs_de_marche: TeneurDeMarche };
     for (const [cle, C] of Object.entries(classes)) for (let i = 0; i < cfg.agents[cle].nombre; i++) this.agents.push(new C(this.agents.length, cfg.agents[cle], this.rng, cm));
-    this.externe = new Externe(this.agents.length, cm); this.agents.push(this.externe);
+    this.externe = new Externe(this.agents.length, cm, "externe"); this.agents.push(this.externe);
+    this.acheteur = new Externe(this.agents.length, cm, "strategique"); this.agents.push(this.acheteur);
     this.teneurs = this.agents.filter(a => a.type === "mm");
-    this.groupes = { fondamentalistes: this.agents.filter(a => a.type === "fond"), chartistes: this.agents.filter(a => a.type === "chart"), bruiteurs: this.agents.filter(a => a.type === "bruit") };
+    this.traders = this.agents.filter(a => ["fond", "chart", "bruit"].includes(a.type));
+    this.fondamentalistes = this.agents.filter(a => a.type === "fond");
+    this.bruiteurs = this.agents.filter(a => a.type === "bruit");
+    const chartistes = this.agents.filter(a => a.type === "chart");
+    chartistes.forEach((a, i) => { a.horizon = i % this.horizons.length; });
+    this.groupesChartistes = this.horizons.map((_, k) => chartistes.filter(a => a.horizon === k));
+    this.soumisMarge = chartistes;
+    this.capitalType = {};
+    for (const k of ["fond", "chart", "bruit", "mm"]) { const g = this.agents.filter(a => a.type === k); this.capitalType[k] = g.reduce((s, a) => s + a.capitalInitial, 0) / g.length; }
   }
+  get taxe() { return R.taxe; }
+  get zoneMorte() { return 2 * R.taxe; }
   prixReference() {
     const b = this.carnet.meilleurAchat(this.t), a = this.carnet.meilleureVente(this.t);
-    return b && a ? 0.5 * (b.prix + a.prix) * this.tick : this.dernierPrix;
+    if (b && a) return 0.5 * (b.prix + a.prix) * this.tick;
+    // Un carnet d'un seul côté ne doit pas geler le prix sous la meilleure offre d'achat (ou au-dessus de la meilleure vente).
+    if (b) return Math.max(this.dernierPrix, b.prix * this.tick);
+    if (a) return Math.min(this.dernierPrix, a.prix * this.tick);
+    return this.dernierPrix;
   }
   rendement(f) { const n = this.prix.length; return n <= f ? null : Math.log(this.prix[n - 1] / this.prix[n - 1 - f]); }
   volatiliteRecente() {
@@ -494,9 +549,19 @@ class Marche {
     const v = k > 1 ? Math.sqrt(Math.max(s2 / k - (s / k) ** 2, 0)) : 0;
     this.volCache = [this.t, v]; return v;
   }
-  stress() {
-    if (!this.varLongue || this.t < 2 * this.cfg.marche.fenetre_volatilite) return 1;
-    return this.volatiliteRecente() / Math.sqrt(this.varLongue);
+  stress(horizon) {
+    const ref = this.vars.get(this.hRef);
+    if (!ref || this.t < 2 * this.cfg.marche.fenetre_volatilite) return 1;
+    if (horizon === undefined) return this.volatiliteRecente() / Math.sqrt(ref);
+    return Math.sqrt(this.vars.get(horizon) / ref);
+  }
+  majVolatilites() {
+    const n = this.prix.length, r = Math.log(this.prix[n - 1] / this.prix[n - 2]);
+    for (const [h, v] of this.vars) {
+      const alpha = Math.max(1 - Math.pow(0.5, 1 / h), 1 / this.t);
+      this.vars.set(h, v === null ? r * r : v + alpha * (r * r - v));
+      if (this.emaR.has(h)) this.emaR.set(h, this.emaR.get(h) + alpha * (r - this.emaR.get(h)));
+    }
   }
   envoyerLimite(agent, cote, prix, q, duree) {
     if (q <= 0 || !isFinite(prix)) return;
@@ -509,48 +574,110 @@ class Marche {
   envoyerMarche(agent, cote, q) { this.regler(this.carnet.marche(agent.id, cote, q, this.t)); }
   regler(trs) {
     for (const tr of trs) {
-      const montant = tr.prix * this.tick * tr.q, a = this.agents[tr.acheteur], v = this.agents[tr.vendeur];
-      a.cash -= montant; a.actions += tr.q; v.cash += montant; v.actions -= tr.q;
+      const montant = tr.prix * this.tick * tr.q, frais = R.taxe * montant, a = this.agents[tr.acheteur], v = this.agents[tr.vendeur];
+      a.cash -= montant + frais; a.actions += tr.q; v.cash += montant - frais; v.actions -= tr.q;
       this.dernierPrix = tr.prix * this.tick; this.volPas += tr.q;
     }
   }
+  appliquerInterdictionVAD() { for (const a of this.traders) a.plancherReglementaire = R.interdictionVAD ? 0 : -Infinity; }
   chocFondamental(taille, libelle) { this.fondamental *= Math.exp(taille); this.evenements.push({ t: this.t, libelle }); }
   lancerScenario(cote, total, libelle) { this.scenario = { cote, restant: total, parPas: 40 }; this.evenements.push({ t: this.t, libelle }); }
+
+  appelsDeMarge() {
+    const m = this.cfg.marge, prix = this.prix[this.prix.length - 1];
+    const rappel = 1 - Math.pow(0.5, m.frequence_controle / m.demi_vie_reprise); let n = 0;
+    for (const a of this.soumisMarge) {
+      a.neutre += rappel * (a.neutreInitial - a.neutre);
+      if (a.aLiquider) continue;
+      const capital = a.richesse(prix);
+      if (capital > a.plusHaut) a.plusHaut = capital;
+      else if (capital < a.plusHaut * (1 - m.seuil_perte) && (a.cash < 0 || a.actions < 0)) {
+        // Seules les positions financées par emprunt (cash ou titres empruntés) reçoivent un appel de marge.
+        a.aLiquider = Math.round(a.actions * m.reduction);
+        if (a.aLiquider > 0) a.neutre = Math.max(a.neutre - a.aLiquider, a.neutreInitial * (1 - m.reduction_cible_max));
+        a.annulerTout(this); n++;
+      }
+    }
+    if (n) this.appels.push({ t: this.t, n });
+  }
+  liquidations() {
+    const m = this.cfg.marge;
+    for (const a of this.soumisMarge) {
+      if (!a.aLiquider) continue;
+      const cote = a.aLiquider > 0 ? VENTE : ACHAT, avant = a.actions;
+      this.envoyerMarche(a, cote, Math.min(Math.abs(a.aLiquider), m.tranche_liquidation));
+      a.aLiquider += a.actions - avant;
+      if (a.aLiquider === 0) { a.suspenduJusqua = this.t + Math.floor(this.rng.exponentielle(m.duree_suspension)); a.plusHaut = a.richesse(this.prix[this.prix.length - 1]); }
+    }
+  }
+  verifierFaillites() {
+    const seuil = this.cfg.marche.seuil_faillite, prix = this.prix[this.prix.length - 1]; let n = 0;
+    for (const a of this.traders) {
+      const capital = a.richesse(prix);
+      if (capital < seuil * a.capitalInitial) {
+        const apport = a.capitalInitial - capital; a.cash += apport; this.capitalInjecte += apport;
+        a.neutre = a.neutreInitial; a.aLiquider = 0; a.suspenduJusqua = -1; a.plusHaut = a.capitalInitial; n++;
+      }
+    }
+    if (n) this.faillites.push({ t: this.t, n });
+  }
+  coupeCircuit() {
+    if (this.t < this.arretJusqua) return true;
+    const rg = this.cfg.regulation, fen = rg.coupe_circuit_fenetre, n = this.prix.length;
+    if (R.coupeCircuit && n > fen && this.t >= this.arretJusqua + fen && Math.abs(Math.log(this.prix[n - 1] / this.prix[n - 1 - fen])) > rg.coupe_circuit_seuil) {
+      this.arretJusqua = this.t + rg.coupe_circuit_duree; this.arrets.push(this.t);
+      for (const a of this.agents) a.annulerTout(this);
+      return true;
+    }
+    return false;
+  }
+  intensiteChartistes(h) {
+    const pc = this.cfg.agents.chartistes;
+    let surchauffe = Math.max(this.stress(h) - 1, 0);
+    if (this.emaR.get(h) < 0) surchauffe *= 1 + pc.aversion_pertes;  // en baisse, la peur amplifie l'attention
+    return Math.min(1 + R.attention * surchauffe, pc.attention_max);
+  }
   pas() {
     const cf = this.cfg.fondamental; this.t++; this.volPas = 0;
     let choc = this.rng.normal(0, cf.volatilite);
     if (this.rng.random() < cf.proba_news * R.news) { const n = this.rng.normal(0, cf.amplitude_news); choc += n; this.news.push({ t: this.t, n }); }
     this.fondamental *= Math.exp(choc);
+    this.multiplicateur = 1;
 
-    for (const mm of this.teneurs) mm.annulerTout(this);
-    this.referenceTeneurs = this.prixReference();
-    if (!R.greveMM) for (const mm of this.teneurs) mm.agir(this);
+    if (!this.coupeCircuit()) {
+      for (const mm of this.teneurs) mm.annulerTout(this);
+      this.referenceTeneurs = this.prixReference();
+      if (!R.greveMM) for (const mm of this.teneurs) mm.agir(this);
 
-    if (this.scenario) {
-      const q = Math.min(this.scenario.parPas, this.scenario.restant);
-      this.envoyerMarche(this.externe, this.scenario.cote, q);
-      this.scenario.restant -= q; if (this.scenario.restant <= 0) this.scenario = null;
+      if (this.scenario) {
+        const q = Math.min(this.scenario.parPas, this.scenario.restant);
+        this.envoyerMarche(this.externe, this.scenario.cote, q);
+        this.scenario.restant -= q; if (this.scenario.restant <= 0) this.scenario = null;
+      }
+      if (R.marge) this.liquidations();
+
+      // Acheteur de dernier ressort : sous une forte décote, une OPA devient rentable.
+      const as = this.cfg.acheteur_strategique, plafond = as.decote * this.fondamental;
+      if (this.prixReference() < plafond) { this.acheteur.annulerTout(this); this.envoyerLimite(this.acheteur, ACHAT, plafond, as.titres_par_pas, 1); }
+
+      const A = this.cfg.agents, pf = A.fondamentalistes, pc = A.chartistes, ecart = Math.log(this.prixReference() / this.fondamental);
+      const actifs = [];
+      const tirer = (g, intensite) => { const n = this.rng.poisson(intensite); for (let i = 0; i < n; i++) actifs.push(g[this.rng.entier(0, g.length)]); };
+      tirer(this.fondamentalistes, pf.activite * R.actFond * (1 + R.react * Math.abs(ecart) / pf.echelle_ecart));
+      tirer(this.bruiteurs, A.bruiteurs.activite * Math.exp(-R.taxe / this.cfg.regulation.sensibilite_bruiteurs));
+      let somme = 0;
+      this.horizons.forEach((h, k) => { const mult = this.intensiteChartistes(h); somme += mult; tirer(this.groupesChartistes[k], pc.activite * R.actChart / this.horizons.length * mult); });
+      this.multiplicateur = somme / this.horizons.length;
+      for (let i = actifs.length - 1; i > 0; i--) { const j = this.rng.entier(0, i + 1); [actifs[i], actifs[j]] = [actifs[j], actifs[i]]; }
+      for (const a of actifs) { if (a.aLiquider || this.t < a.suspenduJusqua) continue; a.agir(this); }
     }
-
-    const stress = this.stress(), ecart = Math.log(this.prixReference() / this.fondamental), A = this.cfg.agents;
-    const pc = A.chartistes, pf = A.fondamentalistes;
-    this.multiplicateur = R.attention > 0 ? Math.min(1 + R.attention * Math.max(stress - 1, 0), pc.attention_max) : 1;
-    const intensites = {
-      fondamentalistes: pf.activite * R.actFond * (1 + R.react * Math.abs(ecart) / pf.echelle_ecart),
-      chartistes: pc.activite * R.actChart * this.multiplicateur,
-      bruiteurs: A.bruiteurs.activite,
-    };
-    const actifs = [];
-    for (const [cle, g] of Object.entries(this.groupes)) { const n = this.rng.poisson(intensites[cle]); for (let i = 0; i < n; i++) actifs.push(g[this.rng.entier(0, g.length)]); }
-    for (let i = actifs.length - 1; i > 0; i--) { const j = this.rng.entier(0, i + 1); [actifs[i], actifs[j]] = [actifs[j], actifs[i]]; }
-    for (const a of actifs) a.agir(this);
 
     const b = this.carnet.meilleurAchat(this.t), a = this.carnet.meilleureVente(this.t);
     this.prix.push(this.prixReference()); this.fond.push(this.fondamental);
     this.spread.push(b && a ? (a.prix - b.prix) * this.tick : NaN); this.volume.push(this.volPas); this.attention.push(this.multiplicateur);
-    const n = this.prix.length, r2 = Math.log(this.prix[n - 1] / this.prix[n - 2]) ** 2, alpha = Math.max(this.alphaVol, 1 / this.t);
-    this.varLongue = this.varLongue === null ? r2 : this.varLongue + alpha * (r2 - this.varLongue);
-    if (this.t % this.cfg.marche.frequence_bilan === 0) this.faireBilan();
+    this.majVolatilites();
+    if (R.marge && this.t % this.cfg.marge.frequence_controle === 0) this.appelsDeMarge();
+    if (this.t % this.cfg.marche.frequence_bilan === 0) { this.verifierFaillites(); this.faireBilan(); }
   }
   faireBilan() {
     const p = this.prix[this.prix.length - 1], s = { fond: [0, 0], chart: [0, 0], bruit: [0, 0], mm: [0, 0] };
@@ -649,7 +776,7 @@ function dessinerPerf(m) {
   const { ctx, w, h } = preparer(document.getElementById("g-perf")), cm = m.cfg.marche;
   const init = cm.cash_initial + cm.actions_initiales * cm.prix_initial, n = m.bilanT.length;
   const series = {}; let lo = -1, hi = 1;
-  for (const k in m.bilan) { series[k] = m.bilan[k].map(v => 100 * (v / init - 1)); for (const v of series[k]) { if (v < lo) lo = v; if (v > hi) hi = v; } }
+  for (const k in m.bilan) { series[k] = m.bilan[k].map(v => 100 * (v / m.capitalType[k] - 1)); for (const v of series[k]) { if (v < lo) lo = v; if (v > hi) hi = v; } }
   const bench = m.bilanT.map(t => 100 * ((cm.cash_initial + cm.actions_initiales * m.prix[t]) / init - 1)); for (const v of bench) { if (v < lo) lo = v; if (v > hi) hi = v; }
   const G = 40, D = 6, H = 8, B = 8, pw = w - G - D, ph = h - H - B, marge = (hi - lo) * 0.08; lo -= marge; hi += marge;
   const X = i => G + (n > 1 ? i / (n - 1) : 0) * pw, Y = v => H + (1 - (v - lo) / (hi - lo)) * ph;
@@ -676,9 +803,9 @@ function dessinerRendements(m) {
   ctx.font = POLICE_NUM; ctx.fillStyle = couleurs.muted; ctx.strokeStyle = couleurs.line; ctx.lineWidth = 1; ctx.textBaseline = "middle"; ctx.textAlign = "right";
   for (const v of graduations(-amax, amax, 4)) { const y = Math.round(Y(v)) + 0.5; ctx.beginPath(); ctx.moveTo(G, y); ctx.lineTo(w - D, y); ctx.stroke(); ctx.fillText(v + "%", G - 4, y); }
   r.forEach((v, i) => { ctx.fillStyle = couleurs.ink; const y0 = Y(0), y1 = Y(v); ctx.fillRect(G + i * bw + 0.5, Math.min(y0, y1), Math.max(bw - 1, 1), Math.max(Math.abs(y1 - y0), 1)); });
-  const amaxAtt = 3.2, YA = v => H + (1 - (v - 0.8) / (amaxAtt - 0.8)) * ph;
+  const amaxAtt = 4.2, YA = v => H + (1 - (v - 0.8) / (amaxAtt - 0.8)) * ph;
   ctx.strokeStyle = couleurs["t-chart"]; ctx.lineWidth = 1.6; ctx.beginPath(); att.forEach((v, i) => { const x = G + i * bw + bw / 2; i ? ctx.lineTo(x, YA(v)) : ctx.moveTo(x, YA(v)); }); ctx.stroke();
-  ctx.fillStyle = couleurs["t-chart"]; ctx.textAlign = "left"; for (const v of [1, 2, 3]) ctx.fillText("×" + v, w - D + 4, YA(v));
+  ctx.fillStyle = couleurs["t-chart"]; ctx.textAlign = "left"; for (const v of [1, 2, 3, 4]) ctx.fillText("×" + v, w - D + 4, YA(v));
 }
 
 let derniersFaits = "";
@@ -716,6 +843,8 @@ function majBandeau(m) {
   document.getElementById("c-fond").textContent = formatFr(m.fondamental) + " €";
   document.getElementById("c-spread").textContent = isNaN(s) ? "carnet vide" : formatFr(s) + " €";
   document.getElementById("c-t").textContent = m.t.toLocaleString("fr-FR");
+  let na = 0; for (let i = m.appels.length - 1; i >= 0 && m.appels[i].t > m.t - 1000; i--) na += m.appels[i].n;
+  document.getElementById("c-appels").textContent = na.toLocaleString("fr-FR");
   const st = m.stress(), reg = document.getElementById("c-regime");
   const etat = st >= 3 ? ["crise", "Crise"] : st >= 1.5 ? ["agite", "Agité"] : ["calme", "Calme"];
   reg.className = "regime " + etat[0]; reg.textContent = etat[1] + " · stress " + formatFr(st, 1);
@@ -723,10 +852,16 @@ function majBandeau(m) {
 
 // Journal de marché : événements provoqués, news fortes, changements de régime.
 const journal = [];
-let regimePrecedent = "calme", nNewsLu = 0;
+let regimePrecedent = "calme", nNewsLu = 0, nAppelsLu = 0, nFaillitesLu = 0, nArretsLu = 0, dernierAppelNote = -1e9;
 function noter(t, texte, classe) { journal.unshift({ t, texte, classe }); if (journal.length > 60) journal.pop(); afficherJournal(); }
 function afficherJournal() { document.getElementById("journal").innerHTML = journal.map(e => `<li class="${e.classe || ""}"><span class="t">${e.t.toLocaleString("fr-FR")}</span><span>${e.texte}</span></li>`).join(""); }
 function surveiller(m) {
+  for (; nAppelsLu < m.appels.length; nAppelsLu++) {
+    const e = m.appels[nAppelsLu];
+    if (e.n >= 5 && e.t - dernierAppelNote > 300) { dernierAppelNote = e.t; noter(e.t, `<b>Vague d'appels de marge</b> : ${e.n} hedge funds forcés de vendre au marché.`, "rouge"); }
+  }
+  for (; nFaillitesLu < m.faillites.length; nFaillitesLu++) { const e = m.faillites[nFaillitesLu]; noter(e.t, `<b>Faillite</b> : ${e.n} fonds ${e.n > 1 ? "ferment" : "ferme"}, un nouveau gérant reprend le portefeuille avec des capitaux frais.`, "rouge"); }
+  for (; nArretsLu < m.arrets.length; nArretsLu++) noter(m.arrets[nArretsLu], "<b>Coupe-circuit</b> : cotation suspendue pendant 100 pas.", "ambre");
   for (; nNewsLu < m.news.length; nNewsLu++) { const e = m.news[nNewsLu]; if (Math.abs(e.n) > 0.015) noter(e.t, `<b>News ${e.n > 0 ? "positive" : "négative"}</b> : la valeur fondamentale bouge de ${e.n > 0 ? "+" : ""}${formatFr(100 * e.n, 1)} %.`, e.n > 0 ? "vert" : "rouge"); }
   const st = m.stress(), reg = st >= 3 ? "crise" : st >= 1.5 ? "agite" : "calme";
   if (reg !== regimePrecedent) {
@@ -743,7 +878,8 @@ let marche, enCours = true, vitesse = 20, fenetre = 8000, image = 0, graine = 42
 const reduit = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 function nouvelleSeance(g) {
-  graine = g; marche = new Marche(CONFIG, graine); journal.length = 0; regimePrecedent = "calme"; nNewsLu = 0;
+  graine = g; marche = new Marche(CONFIG, graine); marche.appliquerInterdictionVAD(); journal.length = 0;
+  regimePrecedent = "calme"; nNewsLu = 0; nAppelsLu = 0; nFaillitesLu = 0; nArretsLu = 0; dernierAppelNote = -1e9;
   for (let i = 0; i < 6000; i++) marche.pas();   // préchauffe : le marché est déjà ouvert à l'affichage
   surveiller(marche);
   noter(marche.t, `<b>Ouverture de la séance</b> (univers n° ${graine}). Les 6 000 premiers pas ont déjà été joués.`, "ambre");
@@ -786,7 +922,20 @@ const curseurs = [
   ["r-react", "o-react", v => { R.react = v; }, v => formatFr(v, 1)],
   ["r-news", "o-news", v => { R.news = v; }, v => "×" + formatFr(v, 1)],
   ["r-bande", "o-bande", v => { R.bande = v / 100; }, v => "±" + formatFr(v, 1) + " %"],
+  ["r-taxe", "o-taxe", v => { R.taxe = v / 100; }, v => formatFr(v, 2) + " %"],
 ];
+function bascule(id, cle, libelles, quand) {
+  const b = document.getElementById(id);
+  b.addEventListener("click", () => {
+    R[cle] = !R[cle]; b.setAttribute("aria-pressed", R[cle]); b.firstChild.textContent = libelles[R[cle] ? 1 : 0];
+    if (quand) quand();
+    noter(marche.t, `<b>${libelles[R[cle] ? 1 : 0]}</b>`, "ambre");
+  });
+}
+bascule("b-coupe", "coupeCircuit", ["Coupe-circuit", "Coupe-circuit activé"]);
+bascule("b-vad", "interdictionVAD", ["Interdire la vente à découvert", "Vente à découvert interdite"], () => marche.appliquerInterdictionVAD());
+bascule("b-marge", "marge", ["Appels de marge désactivés", "Appels de marge actifs"],
+        () => { if (!R.marge) for (const a of marche.soumisMarge) a.aLiquider = 0; });
 for (const [id, out, appliquer, format] of curseurs) {
   const input = document.getElementById(id), o = document.getElementById(out);
   const maj = () => { const v = +input.value; appliquer(v); o.textContent = format(v); };
