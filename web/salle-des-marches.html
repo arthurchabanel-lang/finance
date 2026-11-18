@@ -73,7 +73,14 @@ body {
 
 /* Grille principale */
 .corps { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 14px; align-items: start; }
-@media (max-width: 980px) { .corps { grid-template-columns: minmax(0, 1fr); } .pupitre { order: 2; } }
+/* Sur téléphone : prix, puis commandes de séance et événements, puis le reste ; réglages fins en bas. */
+@media (max-width: 980px) {
+  .corps { display: flex; flex-direction: column; }
+  .corps > .pupitre, .corps > .ecrans { display: contents; }
+  .corps > * > * { order: 5; }
+  #p-prix { order: 1; } #p-seance { order: 2; } #p-evenements { order: 3; }
+  #p-comportements, #p-regulation { order: 9; }
+}
 
 .panneau { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; }
 .panneau h2 { margin: 0 0 10px; font-size: 13px; font-weight: 600; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; text-wrap: balance; }
@@ -158,7 +165,7 @@ canvas { display: block; width: 100%; }
 
   <div class="corps">
     <aside class="pupitre">
-      <section class="panneau">
+      <section class="panneau" id="p-seance">
         <h2>Séance</h2>
         <div class="transport">
           <button class="principal" id="b-lecture" type="button">Pause</button>
@@ -173,7 +180,7 @@ canvas { display: block; width: 100%; }
         </div>
       </section>
 
-      <section class="panneau">
+      <section class="panneau" id="p-evenements">
         <h2>Provoquer un événement</h2>
         <div class="chocs">
           <button class="choc rouge" id="e-liquidation" type="button">Liquidation forcée<span>Un fonds doit vendre 4 000 titres au marché, en urgence.</span></button>
@@ -184,7 +191,7 @@ canvas { display: block; width: 100%; }
         </div>
       </section>
 
-      <section class="panneau">
+      <section class="panneau" id="p-comportements">
         <h2>Comportements <small>effet immédiat</small></h2>
         <div class="groupe-titre"><span class="pastille" style="background:var(--t-chart)"></span>Chartistes</div>
         <div class="reglage">
@@ -218,7 +225,7 @@ canvas { display: block; width: 100%; }
         </div>
       </section>
 
-      <section class="panneau">
+      <section class="panneau" id="p-regulation">
         <h2>Régulation <small>effet immédiat</small></h2>
         <div class="reglage">
           <label for="r-taxe">Taxe sur les transactions <output id="o-taxe"></output></label>
@@ -234,7 +241,7 @@ canvas { display: block; width: 100%; }
     </aside>
 
     <main class="ecrans">
-      <section class="panneau">
+      <section class="panneau" id="p-prix">
         <h2>Prix et valeur fondamentale
           <span class="onglets" id="fenetres">
             <button type="button" data-f="2000">2 000 pas</button>
@@ -706,8 +713,11 @@ const COUL_TYPE = { fond: "t-fond", chart: "t-chart", bruit: "t-bruit", mm: "t-m
 const POLICE_NUM = '11px "JetBrains Mono", ui-monospace, monospace';
 
 function preparer(canvas) {
-  const dpr = window.devicePixelRatio || 1, w = canvas.clientWidth, h = canvas.getAttribute("height") * 1;
-  if (canvas.width !== Math.round(w * dpr) || canvas._h !== h) { canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); canvas.style.height = h + "px"; canvas._h = h; }
+  // Hauteur prévue lue une seule fois : modifier canvas.height réécrit l'attribut « height »,
+  // qui, relu à chaque image, était multiplié par la densité de l'écran (×3 sur téléphone).
+  if (canvas._base === undefined) canvas._base = canvas.getAttribute("height") * 1;
+  const dpr = window.devicePixelRatio || 1, w = canvas.clientWidth, h = canvas._base;
+  if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) { canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); canvas.style.height = h + "px"; }
   const ctx = canvas.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
   return { ctx, w, h };
 }
@@ -732,7 +742,8 @@ function dessinerPrix(m) {
   ctx.font = POLICE_NUM; ctx.fillStyle = couleurs.muted; ctx.strokeStyle = couleurs.line; ctx.lineWidth = 1;
   for (const v of graduations(ymin, ymax, 5)) { const y = Math.round(Y(v)) + 0.5; ctx.beginPath(); ctx.moveTo(G, y); ctx.lineTo(w - D, y); ctx.stroke(); ctx.textAlign = "right"; ctx.textBaseline = "middle"; ctx.fillText(formatFr(v, v % 1 ? 1 : 0), G - 6, y); }
   ctx.textAlign = "center"; ctx.textBaseline = "top";
-  for (const v of graduations(debut, n - 1, 6)) { if (v < debut) continue; ctx.fillText(v.toLocaleString("fr-FR"), X(v), h - B + 6); }
+  // Nombre de dates adapté à la largeur (environ une tous les 90 px) pour éviter les chevauchements.
+  for (const v of graduations(debut, n - 1, Math.max(2, Math.floor(pw / 90)))) { if (v < debut) continue; ctx.fillText(v.toLocaleString("fr-FR"), X(v), h - B + 6); }
   // News et événements
   ctx.strokeStyle = couleurs.muted; ctx.globalAlpha = 0.25;
   for (const e of m.news) if (e.t >= debut) { const x = Math.round(X(e.t)) + 0.5; ctx.beginPath(); ctx.moveTo(x, H); ctx.lineTo(x, H + ph); ctx.stroke(); }
