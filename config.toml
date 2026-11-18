@@ -150,3 +150,24 @@ coupe_circuit_seuil = 0.0             # ex. 0.05 : arrêt si le prix bouge de 5 
 coupe_circuit_fenetre = 200           # ... sur cette fenêtre (pas)
 coupe_circuit_duree = 100             # durée de l'arrêt (pas)
 interdiction_vente_decouvert = false
+
+# ---------------------------------------------------------------------
+#  PHASE 6 : PLUSIEURS ACTIFS ET FONDS MULTI-ACTIFS (python contagion.py)
+# ---------------------------------------------------------------------
+# Utilisé uniquement par marche/multi.py : chaque actif reprend la configuration ci-dessus,
+# avec sa propre graine (valeurs fondamentales indépendantes).
+[multi]
+nombre_actifs = 3
+nombre_fonds = 20
+titres_par_actif = 300         # chaque fonds détient 300 titres de chaque actif
+levier = 3.0                   # exposition / capital (3 = 30 000 € de capital pour 90 000 € de titres)
+appels_de_marge = true
+seuil_perte = 0.10             # appel si le capital recule de 10 % sous son plus haut (fonds endetté)
+reduction = 0.5                # il faut alors vendre la moitié de chaque position
+tranche_liquidation = 10       # titres vendus au marché par pas et par actif
+duree_suspension = 300
+demi_vie_reprise = 2000
+frequence_controle = 5
+seuil_faillite = 0.25
+proba_reequilibrage = 0.05     # chance, à chaque pas, qu'un fonds se rapproche de ses cibles
+tranche_reequilibrage = 5

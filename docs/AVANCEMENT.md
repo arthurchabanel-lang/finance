@@ -17,10 +17,13 @@
   Les simulations longues ont révélé quatre défauts du modèle, tous corrigés (détails dans
   les conclusions de la phase 5). Tous les rapports ont été régénérés sur le modèle corrigé.
 
+- **Phase 6** : contagion entre trois actifs par des fonds multi-actifs endettés
+  (`python contagion.py`). Chiffres dans [`contagion.md`](contagion.md), interprétation dans
+  [`conclusions-phase6.md`](conclusions-phase6.md).
+
 ## Reste à faire
 
-1. Phase 6 : plusieurs actifs, fonds endettés multi-actifs, contagion par les appels de marge.
-2. Mettre à jour la salle des marchés (JavaScript) avec le modèle final et vérifier la
+1. Mettre à jour la salle des marchés (JavaScript) avec le modèle final et vérifier la
    parité avec le moteur Python.
 
 ## Points ouverts du modèle

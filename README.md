@@ -95,6 +95,16 @@ Ce script étudie des agents adaptatifs qui choisissent leur stratégie selon ce
 (Brock et Hommes), et une évolution darwinienne des paramètres des stratégies. Voir
 [`docs/conclusions-phase5.md`](docs/conclusions-phase5.md).
 
+## Phase 6 : contagion systémique
+
+```bash
+python contagion.py
+```
+
+Trois actifs aux fondamentaux indépendants, reliés seulement par des fonds multi-actifs
+endettés. Un choc sur un seul actif contamine-t-il les autres ? Voir
+[`docs/conclusions-phase6.md`](docs/conclusions-phase6.md).
+
 ## Structure du code
 
 ```
@@ -104,6 +114,8 @@ marche/simulation.py  l'horloge du marché, la valeur fondamentale, la comptabil
 marche/analyse.py     les tests statistiques
 marche/graphiques.py  le tableau de bord
 marche/validation.py  la validation Monte-Carlo (phase 3)
+marche/experiences.py les expériences de régulation (phase 4)
+marche/multi.py       plusieurs actifs et fonds multi-actifs (phase 6)
 web/                  la salle des marchés interactive (phase 2)
 docs/                 rapports de validation
 tests/                tests automatiques (python -m pytest)
