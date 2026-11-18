@@ -16,6 +16,7 @@ credit_max = 10000.0       # découvert autorisé par agent (achat sur marge)
 fenetre_volatilite = 50    # pas utilisés pour mesurer la volatilité récente
 memoire_volatilite = 10000 # demi-vie (pas) de la volatilité « normale » de référence
 frequence_bilan = 100      # tous les combien de pas on photographie les richesses
+seuil_faillite = 0.25      # un trader dont le capital tombe sous 25 % du départ fait faillite
 bande_prix = 0.02          # un ordre limite ne peut s'écarter de plus de 2 % du prix
 
 [fondamental]
@@ -44,6 +45,9 @@ taille_max_ordre = 15
 duree_ordre = 200              # durée de vie des ordres (pas)
 
 [agents.chartistes]
+# Hedge funds momentum : endettés par construction (0 € de cash pour 100 titres), toute position
+# longue supplémentaire est financée à crédit et exposée aux appels de marge.
+cash_initial = 0.0
 nombre = 100
 activite = 1.0
 attention = 2.0                # quand la volatilité double, ils tradent 3x plus souvent
@@ -62,6 +66,7 @@ duree_ordre = 50
 nombre = 200
 activite = 2.0
 position_max = 100
+rappel_allocation = 0.5        # à 0 titre, 75 % de chances d'acheter : ils rééquilibrent vers 100
 proba_ordre_marche = 0.2
 dispersion_prix = 0.002        # éloignement typique de leurs ordres limites
 taille_ordre = 5
@@ -76,6 +81,36 @@ aversion_volatilite = 2.0      # élargissement de la fourchette quand ça s'agi
 skew_inventaire = 0.005        # décalage des cotations à stock maximal (0,5 %)
 taille_cotation = 30
 
+[agents.adaptatifs]
+# Phase 5 : agents qui choisissent leur stratégie selon ce qui rapporte (désactivés : nombre = 0).
+nombre = 0
+activite = 1.0
+position_max = 100
+dispersion_estimation = 0.01
+echelle_ecart = 0.03
+agressivite = [0.0, 0.5]
+fenetre_min = 10
+fenetre_max = 200
+echelle_tendance = 0.03
+proba_ordre_marche = 0.3
+taille_max_ordre = 10
+duree_ordre_fondamentaliste = 200
+duree_ordre_chartiste = 50
+
+# ---------------------------------------------------------------------
+#  APPRENTISSAGE (phase 5, désactivé par défaut : voir python apprendre.py)
+# ---------------------------------------------------------------------
+[apprentissage]
+intensite_choix = 0.0          # 0 = choix au hasard ; élevé = tous suivent la stratégie gagnante
+memoire_scores = 2000          # demi-vie (pas) du score de chaque stratégie
+
+[evolution]
+actif = false
+periode = 2000                 # une « génération » tous les 2 000 pas
+part_remplacee = 0.1           # les 10 % les moins performants...
+part_modeles = 0.2             # ... copient l'un des 20 % les plus performants
+mutation = 0.1                 # amplitude des mutations
+
 # ---------------------------------------------------------------------
 #  APPELS DE MARGE (courtier)
 # ---------------------------------------------------------------------
@@ -85,11 +120,13 @@ actif = true
 # d'investisseurs « value » non endettés. Les soumettre aussi aux appels de marge supprime la
 # force de rappel en pleine chute (« limites de l'arbitrage ») et rend le marché instable.
 types = ["Chartiste"]
-seuil_perte = 0.05             # appel si le capital recule de 5 % sous son plus haut
+seuil_perte = 0.05             # appel si le capital recule de 5 % sous son plus haut,
+                               # pour un fonds endetté (cash < 0) ou vendeur à découvert
 reduction = 0.5                # il faut alors couper la moitié de la position
 tranche_liquidation = 20       # titres vendus au marché par pas pendant la liquidation
 duree_suspension = 300         # durée moyenne (aléatoire) de suspension après liquidation
 demi_vie_reprise = 2000        # l'exposition cible, réduite d'autant, se reconstitue lentement
+reduction_cible_max = 0.5      # l'exposition cible ne descend jamais sous 50 % de l'initiale
 frequence_controle = 5         # le courtier vérifie tous les 5 pas
 
 # ---------------------------------------------------------------------

@@ -72,10 +72,21 @@ class Marche:
         self.hist_richesse: dict[str, list[float]] = defaultdict(list)
         self.hist_richesse_t: list[int] = []
         self.taxes_collectees = 0.0
+        self.capital_injecte = 0.0                       # apports des fonds qui remplacent les faillis
+        self.hist_faillites: list[tuple[int, str]] = []
         self._volume_pas = 0
         self.scenario: dict | None = None
 
         self._creer_agents(config)
+        # Apprentissage (phase 5) : score récent de chaque stratégie et évolution des paramètres
+        ca = config.get("apprentissage", {})
+        self.intensite_choix = ca.get("intensite_choix", 0.0)
+        self._alpha_score = 1.0 - 0.5 ** (1.0 / ca.get("memoire_scores", 2000))
+        self.score = {"fondamentaliste": 0.0, "chartiste": 0.0}
+        self._signaux = (0.0, 0.0)
+        self.hist_part_fondamentaliste: list[float] = []
+        self.evolution = config.get("evolution", {"actif": False})
+        self.hist_evolution: list[dict] = []
         self.strategique = config.get("acheteur_strategique", {"actif": False})
         if self.strategique["actif"]:
             from .agents import ActeurExterne
@@ -87,9 +98,9 @@ class Marche:
         cm = config["marche"]
         self.agents: list[Agent] = []
         for cle, classe in TYPES_AGENTS.items():
-            p = config["agents"][cle]
+            p = config["agents"].get(cle, {"nombre": 0})
             for _ in range(p["nombre"]):
-                agent = classe(len(self.agents), cash=cm["cash_initial"],
+                agent = classe(len(self.agents), cash=p.get("cash_initial", cm["cash_initial"]),
                                actions=cm["actions_initiales"],
                                credit_max=p.get("credit_max", cm["credit_max"]), rng=self.rng, p=p)
                 agent.plus_haut = agent.richesse(cm["prix_initial"])
@@ -108,6 +119,63 @@ class Marche:
         self.soumis_marge = [a for a in self.traders
                              if a.type_nom in self.marge.get("types", [])] if self.marge["actif"] else []
         self.types = list(dict.fromkeys(a.type_nom for a in self.agents))
+        for a in self.agents:
+            a.richesse_debut = a.capital_initial = a.richesse(cm["prix_initial"])
+
+    # ------------------------------------------------------- apprentissage
+    def proba_fondamentaliste(self) -> float:
+        """Probabilité logit (Brock et Hommes) de jouer la stratégie fondamentaliste."""
+        ref = self._var[self._demi_vie_ref]
+        if not ref:
+            return 0.5
+        # Écart de score en « t-statistique » : rapporté à la volatilité et à la longueur de la
+        # mémoire. d = 2 signifie qu'une stratégie bat nettement l'autre ces derniers temps.
+        d = (self.score["fondamentaliste"] - self.score["chartiste"]) / math.sqrt(ref) \
+            * math.sqrt(1.0 / self._alpha_score)
+        return 1.0 / (1.0 + math.exp(-max(min(self.intensite_choix * d, 50.0), -50.0)))
+
+    def _maj_scores(self) -> None:
+        """Gain du dernier pas d'un portefeuille qui suit chaque stratégie (signal en [-1, 1])."""
+        r = math.log(self.hist_prix[-1] / self.hist_prix[-2])
+        sf, sc = self._signaux
+        a = self._alpha_score
+        self.score["fondamentaliste"] += a * (sf * r - self.score["fondamentaliste"])
+        self.score["chartiste"] += a * (sc * r - self.score["chartiste"])
+        tendance = self.rendement(100) or 0.0
+        self._signaux = (math.tanh(math.log(self.valeur_fondamentale / self.hist_prix[-1]) / 0.03),
+                         math.tanh(tendance / 0.03))
+
+    def _evoluer(self) -> None:
+        """Sélection : les moins performants copient (avec mutation) les plus performants."""
+        ev = self.evolution
+        prix = self.hist_prix[-1]
+        cliche = {"t": self.t}
+        for nom, genes in (("Fondamentaliste", ("biais", "echelle", "agressivite")),
+                           ("Chartiste", ("fenetre", "echelle"))):
+            groupe = [a for a in self.traders if a.type_nom == nom]
+            if len(groupe) < 10:
+                continue
+            perf = np.array([(a.richesse(prix) - a.richesse_debut) / abs(a.richesse_debut)
+                             for a in groupe])
+            ordre = np.argsort(perf)
+            n_out = int(len(groupe) * ev["part_remplacee"])
+            modeles = ordre[-int(len(groupe) * ev["part_modeles"]):]
+            mu = ev["mutation"]
+            for i in ordre[:n_out]:
+                perdant, modele = groupe[i], groupe[int(self.rng.choice(modeles))]
+                for g in genes:
+                    setattr(perdant, g, getattr(modele, g))
+                perdant.echelle *= math.exp(self.rng.normal(0.0, mu))
+                if nom == "Fondamentaliste":
+                    perdant.biais += self.rng.normal(0.0, mu * 0.01)
+                    perdant.agressivite = min(max(perdant.agressivite + self.rng.normal(0.0, mu * 0.2), 0.0), 1.0)
+                else:
+                    perdant.fenetre = int(min(max(round(perdant.fenetre * math.exp(self.rng.normal(0.0, mu))), 2), 2000))
+            for g in genes:
+                cliche[f"{nom}.{g}"] = np.array([getattr(a, g) for a in groupe], dtype=float)
+        for a in self.agents:
+            a.richesse_debut = a.richesse(prix)
+        self.hist_evolution.append(cliche)
 
     def ajouter_agent(self, agent: Agent) -> Agent:
         """Ajoute un acteur extérieur (scénarios, fonds multi-actifs) hors des groupes."""
@@ -117,11 +185,20 @@ class Marche:
 
     # ---------------------------------------------- informations pour agents
     def prix_reference(self) -> float:
-        """Milieu de fourchette si le carnet est des deux côtés, sinon dernier prix."""
+        """Milieu de fourchette si le carnet est des deux côtés.
+
+        Sinon, le dernier prix échangé, mais jamais sous la meilleure offre d'achat ni au-dessus
+        de la meilleure offre de vente : un carnet sans vendeurs où des acheteurs offrent plus
+        que le dernier cours ne doit pas geler le prix (bug corrigé en phase 5).
+        """
         bid = self.carnet.meilleur_achat(self.t)
         ask = self.carnet.meilleure_vente(self.t)
         if bid and ask:
             return 0.5 * (bid.prix + ask.prix) * self.tick
+        if bid:
+            return max(self.dernier_prix, bid.prix * self.tick)
+        if ask:
+            return min(self.dernier_prix, ask.prix * self.tick)
         return self.dernier_prix
 
     def rendement(self, fenetre: int) -> float | None:
@@ -225,10 +302,15 @@ class Marche:
             capital = a.richesse(prix)
             if capital > a.plus_haut:
                 a.plus_haut = capital
-            elif capital < a.plus_haut * (1.0 - m["seuil_perte"]) and a.actions != 0:
+            elif (capital < a.plus_haut * (1.0 - m["seuil_perte"])
+                  and (a.cash < 0 or a.actions < 0)):
+                # Seules les positions financées par emprunt (cash ou titres empruntés) sont
+                # exposées à un appel de marge ; un fonds sans dette n'en reçoit pas.
                 # Appel de marge : réduire l'exposition d'une fraction, au marché.
                 a.a_liquider = int(round(a.actions * m["reduction"]))
-                a.neutre = max(a.neutre - a.a_liquider, 0.0)  # le fonds réduit son exposition cible
+                if a.a_liquider > 0:  # le fonds réduit son exposition cible, dans une limite
+                    plancher = a.neutre_initial * (1.0 - m.get("reduction_cible_max", 1.0))
+                    a.neutre = max(a.neutre - a.a_liquider, plancher)
                 a.annuler_tout(self)
                 n += 1
         if n:
@@ -316,6 +398,8 @@ class Marche:
             pf = self.config["agents"]["fondamentalistes"]
             tirer(self.groupes["fondamentalistes"],
                   pf["activite"] * (1.0 + pf["reactivite_ecart"] * abs(ecart) / pf["echelle_ecart"]))
+            if self.groupes.get("adaptatifs"):
+                tirer(self.groupes["adaptatifs"], self.config["agents"]["adaptatifs"]["activite"])
             pb = self.config["agents"]["bruiteurs"]
             tirer(self.groupes["bruiteurs"],
                   pb["activite"] * math.exp(-self.taxe / self.reg["sensibilite_bruiteurs"]))
@@ -341,11 +425,39 @@ class Marche:
         self.hist_volume.append(self._volume_pas)
         self.hist_attention.append(multiplicateur)
         self._maj_volatilites()
+        self._maj_scores()
+        if self.groupes.get("adaptatifs"):
+            self.hist_part_fondamentaliste.append(self.proba_fondamentaliste())
+        if self.evolution["actif"] and self.t % self.evolution["periode"] == 0:
+            self._evoluer()
 
         if self.marge["actif"] and self.t % self.marge["frequence_controle"] == 0:
             self._appels_de_marge()
         if self.t % self.config["marche"]["frequence_bilan"] == 0:
+            self._faillites()
             self._bilan()
+
+    def _faillites(self) -> None:
+        """Un trader dont le capital tombe sous le seuil ferme ; un nouveau fonds reprend son
+        portefeuille avec des capitaux frais (les titres sont conservés, l'apport est compté)."""
+        seuil = self.config["marche"].get("seuil_faillite", 0.0)
+        if seuil <= 0:
+            return
+        prix = self.hist_prix[-1]
+        cm = self.config["marche"]
+        for a in self.traders:
+            capital_initial = a.capital_initial
+            capital = a.richesse(prix)
+            if capital < seuil * capital_initial:
+                apport = capital_initial - capital
+                a.cash += apport
+                self.capital_injecte += apport
+                a.neutre = a.neutre_initial
+                a.a_liquider = 0
+                a.suspendu_jusqua = -1
+                a.plus_haut = capital_initial
+                a.richesse_debut = capital_initial
+                self.hist_faillites.append((self.t, a.type_nom))
 
     def _bilan(self) -> None:
         prix = self.hist_prix[-1]

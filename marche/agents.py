@@ -158,13 +158,16 @@ class Bruiteur(Agent):
         super().__init__(*args, **kwargs)
         p = kwargs["p"]
         self.proba_marche = p["proba_ordre_marche"]
+        self.rappel = p.get("rappel_allocation", 0.0)
         self.dispersion = p["dispersion_prix"]
         self.taille = p["taille_ordre"]
         self.duree = p["duree_ordre"]
 
     def agir(self, t: int, marche: "Marche") -> None:
         prix = marche.prix_reference()
-        cote = ACHAT if self.rng.random() < 0.5 else VENTE
+        # Direction aléatoire, mais penchant vers l'allocation de long terme (rééquilibrage).
+        p_achat = 0.5 + self.rappel * (self.neutre - self.actions) / self.position_max
+        cote = ACHAT if self.rng.random() < min(max(p_achat, 0.05), 0.95) else VENTE
         quantite = self.quantite_autorisee(cote, int(self.rng.integers(1, self.taille + 1)), prix)
         if self.rng.random() < self.proba_marche:
             marche.envoyer_marche(self, cote, quantite)
@@ -221,9 +224,47 @@ class ActeurExterne(Agent):
         pass
 
 
+class Adaptatif(Agent):
+    """Agent qui choisit sa stratégie à chaque décision (Brock et Hommes, 1998).
+
+    Le marché tient le score récent de chaque stratégie (ce qu'aurait rapporté un
+    portefeuille qui la suit). L'agent joue plus souvent la gagnante, avec une
+    probabilité logit dont l'intensité règle la force de l'apprentissage.
+    """
+
+    type_nom = "Adaptatif"
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        p = kwargs["p"]
+        # Paramètres de la casquette « fondamentaliste »
+        self.biais = self.rng.normal(0.0, p["dispersion_estimation"])
+        self.exposition_max_euros = self.position_max * p.get("prix_reference_limite", 100.0)
+        self.echelle_f = p["echelle_ecart"] * self.rng.uniform(0.5, 1.5)
+        self.agressivite = self.rng.uniform(*p["agressivite"])
+        # Paramètres de la casquette « chartiste »
+        self.fenetre = int(self.rng.integers(p["fenetre_min"], p["fenetre_max"] + 1))
+        self.echelle_c = p["echelle_tendance"] * self.rng.uniform(0.5, 1.5)
+        self.proba_marche = p["proba_ordre_marche"]
+        self.taille_max = p["taille_max_ordre"]
+        self.duree_f, self.duree_c = p["duree_ordre_fondamentaliste"], p["duree_ordre_chartiste"]
+        self.position_max_titres = self.position_max
+        self.mode = "fondamentaliste"
+
+    def agir(self, t: int, marche: "Marche") -> None:
+        if self.rng.random() < marche.proba_fondamentaliste():
+            self.mode, self.echelle, self.duree = "fondamentaliste", self.echelle_f, self.duree_f
+            Fondamentaliste.agir(self, t, marche)
+        else:
+            self.mode, self.echelle, self.duree = "chartiste", self.echelle_c, self.duree_c
+            self.position_max = self.position_max_titres
+            Chartiste.agir(self, t, marche)
+
+
 TYPES_AGENTS = {
     "fondamentalistes": Fondamentaliste,
     "chartistes": Chartiste,
     "bruiteurs": Bruiteur,
     "teneurs_de_marche": TeneurDeMarche,
+    "adaptatifs": Adaptatif,
 }
