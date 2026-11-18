@@ -19,7 +19,7 @@
 ## En cours : phase 4, expériences de régulation
 
 `python experimenter.py` lance 6 politiques × 20 univers appariés, plus un stress test de
-liquidation. Les résultats sont dans [`experiences.md`](experiences.md).
+liquidation. Les résultats sont dans [`experiences.md`](experiences.md), et leur interprétation dans [`conclusions-phase4.md`](conclusions-phase4.md).
 
 **Premiers résultats, à analyser et à vérifier avant d'en tirer des conclusions :**
 - **Taxe 0,1 %** : la fourchette double et le volume baisse de 22 %, sans gain de stabilité significatif.
