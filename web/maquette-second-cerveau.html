@@ -3,113 +3,185 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
-/* Layout : un écran à la fois, comme l'appli finale ; cartes blanches sur fond gris, barre d'onglets en bas. Thème clair uniquement. */
+/* Layout : un écran à la fois, comme l'appli finale ; barre du haut, cartes blanches sur fond gris, barre d'onglets en bas. Thème clair uniquement. */
 :root{
   color-scheme:light;
-  --bg:#F1F3F7; --surface:#FFFFFF; --line:#E0E5ED; --ink:#0E1A2B; --muted:#5A6678;
+  --bg:#F1F3F7; --surface:#FFFFFF; --line:#E3E7EE; --grid:#EDF0F4; --ink:#0E1A2B; --ink-2:#38445A; --muted:#5F6B7E;
   --accent:#1B3D8C; --accent-ink:#FFFFFF; --accent-soft:#E7EDF9;
-  --save:#1C7A4E; --save-soft:#E3F3EA; --invest:#5B4BB5; --invest-soft:#ECE9F8; --rdv:#1B3D8C;
+  --save:#1C7A4E; --save-soft:#E3F3EA; --pea:#5B4BB5; --pea-soft:#ECE9F8; --av:#C27A1A; --av-soft:#F8EEDF;
+  --up:#1C7A4E; --warn:#A35A12;
   --display:"Manrope", "Segoe UI", system-ui, sans-serif;
   --body:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --r:16px;
 }
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--body);-webkit-font-smoothing:antialiased}
-.wrap{max-width:520px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px calc(100px + env(safe-area-inset-bottom,0px))}
-.banner{font-size:12.5px;color:var(--muted);background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:8px 12px;margin-bottom:18px}
-.banner b{color:var(--ink);font-weight:600}
-h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;letter-spacing:-.01em}
-h1{font-size:27px;font-weight:800;line-height:1.15}
-h2{font-size:16px;font-weight:700}
-.date{font-size:13px;color:var(--muted);text-transform:capitalize}
+.wrap{max-width:520px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:10px calc(100px + env(safe-area-inset-bottom,0px))}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;letter-spacing:-.015em}
+h1{font-size:28px;font-weight:800;line-height:1.12}
+h2{font-size:19px;font-weight:800}
+h3{font-size:15px;font-weight:700}
+.eyebrow{font-size:11.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .num{font-variant-numeric:tabular-nums}
-.section{display:flex;flex-direction:column;gap:10px;margin-top:24px}
+.muted{color:var(--muted)}
+.up{color:var(--up);font-weight:600}
+.section{display:flex;flex-direction:column;gap:12px;margin-top:30px}
 .sec-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .sec-head small{font-size:13px;color:var(--muted)}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.pad{padding:16px}
 button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
-button:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.banner{font-size:12.5px;color:var(--muted);border:1px dashed #C9D0DB;border-radius:10px;padding:7px 12px;margin-top:12px}
+.banner b{color:var(--ink);font-weight:600}
+
+/* Barre du haut */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:6px}
+.who{display:flex;align-items:center;gap:10px;min-width:0}
+.avatar{flex:none;width:38px;height:38px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:15px}
+.who .app{font-family:var(--display);font-weight:800;font-size:15px;line-height:1.1}
+.who .sub{font-size:12px;color:var(--muted)}
+.who .sub::first-letter{text-transform:uppercase}
+.gear{width:40px;height:40px;border-radius:12px;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center;color:var(--ink-2)}
+.gear svg{width:20px;height:20px}
 
 /* Accueil */
-.question{font-family:var(--display);font-size:21px;font-weight:700;line-height:1.3;margin-top:28px;text-wrap:balance}
+.hello{margin-top:22px}
+.question{font-family:var(--display);font-size:20px;font-weight:700;line-height:1.3;margin-top:6px;color:var(--ink-2);text-wrap:balance}
+.glance{display:grid;grid-template-columns:repeat(3,1fr);margin-top:18px;overflow:hidden}
+.glance button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:12px;text-align:left;border-left:1px solid var(--line);min-width:0}
+.glance button:first-child{border-left:0}
+.glance .k{font-size:11.5px;color:var(--muted);font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.glance .v{font-family:var(--display);font-weight:800;font-size:17px;font-variant-numeric:tabular-nums;line-height:1.2}
+.glance .s{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .field{position:relative;margin-top:14px}
-.field textarea{width:100%;min-height:150px;resize:none;font:16px/1.5 var(--body);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 16px 60px}
+.field textarea{width:100%;min-height:140px;resize:none;font:16px/1.5 var(--body);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 16px 62px}
 .field .tools{position:absolute;left:12px;right:12px;bottom:12px;display:flex;justify-content:space-between;align-items:center}
-.mic{width:40px;height:40px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center}
+.mic{width:42px;height:42px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center}
 .mic svg{width:20px;height:20px}
-.send{background:var(--accent);color:var(--accent-ink);font-weight:600;border-radius:999px;padding:9px 18px}
+.send{background:var(--accent);color:var(--accent-ink);font-weight:600;border-radius:999px;padding:10px 20px}
 .quick{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
 .quick button{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:left;display:flex;flex-direction:column;gap:1px}
 .quick b{font-weight:600;font-size:14px}
 .quick span{font-size:12.5px;color:var(--muted)}
-.answer{margin-top:22px;display:flex;flex-direction:column;gap:12px}
 .you{font-size:14px;color:var(--muted);border-left:3px solid var(--line);padding-left:12px}
-.reply{padding:16px;display:flex;flex-direction:column;gap:10px}
+.reply{display:flex;flex-direction:column;gap:10px}
 .reply p{margin:0}
 .reply ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:3px}
 .filed{display:flex;flex-wrap:wrap;gap:6px}
-.pill{font-size:12px;font-weight:600;border-radius:999px;padding:4px 10px;display:inline-flex;align-items:center;gap:6px}
-.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
-.pill.rdv{background:var(--accent-soft);color:var(--rdv)}
-.pill.task{background:#EEF0F4;color:#3D4859}
-.pill.save{background:var(--save-soft);color:var(--save)}
-.pill.invest{background:var(--invest-soft);color:var(--invest)}
+.pill{font-size:12px;font-weight:600;border-radius:999px;padding:4px 10px;display:inline-flex;align-items:center;gap:6px;color:var(--ink-2)}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--dot,currentColor)}
+.pill.rdv{background:var(--accent-soft);--dot:var(--accent)}
+.pill.task{background:#EEF0F4;--dot:#7A8597}
+.pill.save{background:var(--save-soft);--dot:var(--save)}
+.pill.pea{background:var(--pea-soft);--dot:var(--pea)}
+.pill.av{background:var(--av-soft);--dot:var(--av)}
 
-/* Ma journée */
-.agenda{padding:4px 0}
-.slot{display:grid;grid-template-columns:56px 1fr;gap:12px;padding:12px 16px;border-top:1px solid var(--line);align-items:start}
-.slot:first-child{border-top:0}
-.slot time{font-weight:600;font-variant-numeric:tabular-nums;color:var(--accent);padding-top:1px}
-.slot .what{min-width:0}
-.slot .where{font-size:13px;color:var(--muted)}
-.slot.past time,.slot.past .what{color:var(--muted)}
-.slot.next{background:var(--accent-soft)}
-.tag-now{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+/* Ma journée : semaine */
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:8px}
+.day{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 7px;border-radius:12px}
+.day .dn{font-size:11.5px;color:var(--muted);font-weight:600;text-transform:uppercase}
+.day .dd{font-family:var(--display);font-weight:800;font-size:17px;font-variant-numeric:tabular-nums}
+.day .dots{display:flex;gap:3px;height:6px}
+.day .dots i{width:5px;height:5px;border-radius:50%;background:var(--accent)}
+.day.today .dd{color:var(--accent)}
+.day[aria-pressed=true]{background:var(--accent)}
+.day[aria-pressed=true] .dn,.day[aria-pressed=true] .dd{color:var(--accent-ink)}
+.day[aria-pressed=true] .dots i{background:var(--accent-ink)}
+/* frise */
+.timeline{position:relative;padding:8px 14px 8px 0}
+.tl-grid{position:relative}
+.hour{position:absolute;left:0;right:0;display:flex;align-items:flex-start;gap:8px;font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.hour span{width:46px;text-align:right;transform:translateY(-8px);flex:none}
+.hour::after{content:"";flex:1;border-top:1px solid var(--grid)}
+.ev{position:absolute;left:58px;right:0;border-radius:10px;background:var(--accent-soft);border-left:3px solid var(--accent);padding:4px 10px;overflow:hidden;display:flex;flex-direction:column;justify-content:center;min-height:44px;line-height:1.3;z-index:1}
+.ev b{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev small{font-size:12px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev.past{background:#F2F4F7;border-left-color:#AEB7C4}
+.ev.past b,.ev.past small{color:var(--muted)}
+.now{position:absolute;left:50px;right:0;height:0;border-top:2px solid #D2453A;z-index:2}
+.now::before{content:"";position:absolute;left:-5px;top:-6px;width:10px;height:10px;border-radius:50%;background:#D2453A;box-shadow:0 0 0 2px var(--surface)}
+.now span{position:absolute;right:0;top:-20px;font-size:11px;font-weight:700;color:#B23A30;background:var(--surface);padding:0 4px}
+.empty{padding:18px 16px;color:var(--muted);font-size:14px}
+/* tâches */
 .task{display:flex;align-items:center;gap:12px;padding:13px 16px;border-top:1px solid var(--line);width:100%;text-align:left}
 .task:first-child{border-top:0}
 .box{flex:none;width:22px;height:22px;border-radius:7px;border:2px solid #C4CCD8;display:grid;place-items:center;transition:background .2s,border-color .2s}
 .task .t{position:relative;flex:1;min-width:0}
-.task .t::after{content:"";position:absolute;left:0;top:52%;height:1.5px;width:0;background:var(--muted);transition:width .3s ease}
+.task .t .lbl{position:relative;display:inline}
+.task .t .lbl::after{content:"";position:absolute;left:0;top:55%;height:1.5px;width:0;background:var(--muted);transition:width .3s ease}
 .task.done .box{background:var(--accent);border-color:var(--accent)}
 .task.done .box::after{content:"";width:5px;height:10px;border:solid #fff;border-width:0 2px 2px 0;transform:translateY(-1px) rotate(45deg)}
 .task.done .t{color:var(--muted)}
-.task.done .t::after{width:100%}
-.task .late{font-size:12px;color:#A35A12;font-weight:600}
-.later{padding:12px 16px;display:flex;flex-direction:column;gap:8px}
-.later .row{display:flex;justify-content:space-between;gap:12px;font-size:14px}
-.later .row span:first-child{color:var(--muted);flex:none;width:92px}
-.later .row span:last-child{flex:1;min-width:0}
+.task.done .t .lbl::after{width:100%}
+.task .late{font-size:12px;color:var(--warn);font-weight:600;display:block}
 
 /* Mon argent */
-.total{padding:18px 16px;display:flex;flex-direction:column;gap:4px}
-.total .label{font-size:13px;color:var(--muted)}
-.total .big{font-family:var(--display);font-size:34px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
-.total .split{display:flex;gap:16px;font-size:13px;color:var(--muted);flex-wrap:wrap}
-.total .split b{color:var(--ink);font-weight:600}
-.goal{padding:16px;display:flex;flex-direction:column;gap:8px}
+.hero{display:flex;flex-direction:column;gap:2px}
+.hero .big{font-family:var(--display);font-size:42px;font-weight:800;letter-spacing:-.03em;line-height:1.05;font-variant-numeric:tabular-nums}
+.hero .delta{font-size:14px}
+.chart{position:relative;margin-top:10px}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart text{font:11px var(--body);fill:var(--muted);font-variant-numeric:tabular-nums}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:10px;height:10px;border-radius:3px;background:var(--c)}
+.legend i.ln{height:3px;border-radius:2px}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:#fff;border-radius:10px;padding:8px 10px;font-size:12.5px;line-height:1.45;min-width:140px;transform:translate(-50%,-100%);white-space:nowrap;font-variant-numeric:tabular-nums;z-index:3}
+.tip b{font-weight:600}
+.tip .r{display:flex;justify-content:space-between;gap:14px}
+.tip .r span:first-child{display:inline-flex;align-items:center;gap:6px;color:#C8D0DD}
+.tip .r i{width:8px;height:8px;border-radius:2px;background:var(--c)}
+.tblview{font-size:13px;color:var(--accent);font-weight:600;align-self:flex-start;padding:4px 0}
+table.data{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+table.data th,table.data td{padding:6px 4px;border-top:1px solid var(--line);text-align:right}
+table.data th:first-child,table.data td:first-child{text-align:left}
+table.data th{color:var(--muted);font-weight:600;border-top:0}
+.donut-wrap{display:flex;flex-direction:column;align-items:center;gap:18px}
+.donut-wrap svg{width:150px;height:150px}
+.donut-wrap .split-list{width:100%}
+.split-list{display:flex;flex-direction:column;gap:10px;min-width:0}
+.split-list .it{display:grid;grid-template-columns:12px 1fr auto;gap:4px 10px;align-items:center}
+.split-list i{width:12px;height:12px;border-radius:4px;background:var(--c)}
+.split-list .n{font-size:14px;min-width:0}
+.split-list .p{font-size:12.5px;color:var(--muted);grid-column:2}
+.split-list .a{font-weight:600;font-variant-numeric:tabular-nums;grid-row:1;grid-column:3}
+.month .amt{font-family:var(--display);font-size:24px;font-weight:800;font-variant-numeric:tabular-nums}
+.month .amt small{font-size:15px;color:var(--muted);font-weight:700}
+.bar{height:10px;border-radius:99px;background:#E7EBF1;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px;background:var(--c,var(--save));transform-origin:left}
+.rows .line{display:grid;grid-template-columns:62px 1fr auto;gap:10px;padding:11px 0;border-top:1px solid var(--line);font-size:14px;font-variant-numeric:tabular-nums;align-items:center}
+.rows .line:first-child{border-top:0}
+.rows .d{color:var(--muted)}
+.rows .a{font-weight:600}
+.rows .planned .a{color:var(--muted)}
+.sub-h{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+.goal{display:flex;flex-direction:column;gap:8px}
 .goal .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .goal .top b{font-weight:600}
 .goal .amt{font-variant-numeric:tabular-nums;font-size:14px;color:var(--muted)}
-.goal .amt strong{color:var(--ink);font-weight:600}
-.bar{height:10px;border-radius:99px;background:#E7EBF1;overflow:hidden}
-.bar i{display:block;height:100%;border-radius:99px;background:var(--save);transform-origin:left}
+.goal .amt strong{color:var(--ink);font-weight:700;font-family:var(--display);font-size:16px}
 .goal .foot{font-size:12.5px;color:var(--muted)}
-.inv{padding:16px;display:flex;flex-direction:column;gap:10px}
 .inv .top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
-.inv .name{font-weight:600}
+.inv .name{font-weight:600;display:flex;align-items:center;gap:8px}
+.inv .name i{width:10px;height:10px;border-radius:3px;background:var(--c)}
 .inv .sub{font-size:12.5px;color:var(--muted)}
 .inv .val{text-align:right;font-variant-numeric:tabular-nums}
-.inv .val b{display:block;font-size:17px;font-family:var(--display);font-weight:700}
-.up{color:var(--save);font-size:13px;font-weight:600}
-.kv{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:13.5px;font-variant-numeric:tabular-nums}
+.inv .val b{display:block;font-size:20px;font-family:var(--display);font-weight:800}
+.kv{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:13.5px;font-variant-numeric:tabular-nums;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
 .kv span:nth-child(odd){color:var(--muted)}
 .kv span:nth-child(even){text-align:right}
-.ledger .line{display:grid;grid-template-columns:64px 1fr auto;gap:10px;padding:11px 16px;border-top:1px solid var(--line);font-size:14px;font-variant-numeric:tabular-nums}
-.ledger .line:first-child{border-top:0}
-.ledger .d{color:var(--muted)}
-.ledger .l{min-width:0}
-.ledger .a{font-weight:600}
 .note{font-size:12.5px;color:var(--muted);margin:0}
+/* projection */
+.proj-out{display:flex;flex-direction:column;gap:2px}
+.proj-out .big{font-family:var(--display);font-size:34px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1}
+.ctrl{display:flex;flex-direction:column;gap:4px;margin-top:12px}
+.ctrl label{display:flex;justify-content:space-between;font-size:13.5px;color:var(--ink-2)}
+.ctrl label b{font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--accent);height:28px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:4px}
+.seg button{border:1px solid var(--line);border-radius:10px;padding:8px 4px;font-size:13px;color:var(--ink-2)}
+.seg button[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
 
 /* Onglets */
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
@@ -122,18 +194,33 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 @media (prefers-reduced-motion:no-preference){
   .screen:not([hidden]) .bar i{animation:fill .9s cubic-bezier(.2,.7,.2,1) both}
   @keyframes fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+  .screen:not([hidden]) .donut-seg{animation:sweep 1s cubic-bezier(.2,.7,.2,1) both}
+  @keyframes sweep{from{stroke-dasharray:0 999}}
 }
-@media (prefers-reduced-motion:reduce){.task .t::after,.box{transition:none}}
+@media (prefers-reduced-motion:reduce){.task .t .lbl::after,.box{transition:none}}
 </style>
 
 <div class="wrap">
-  <div class="banner"><b>Maquette</b> : les tâches, rendez-vous et montants sont des exemples inventés. Tu peux changer d'onglet et cocher les tâches pour voir les animations.</div>
+  <header class="topbar">
+    <div class="who">
+      <div class="avatar" aria-hidden="true">A</div>
+      <div><div class="app">Second Cerveau</div><div class="sub" id="top-date">mercredi 18 novembre</div></div>
+    </div>
+    <button class="gear" aria-label="Réglages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+  </header>
+  <div class="banner"><b>Maquette</b> : rendez-vous, tâches et montants sont des exemples inventés. Les onglets, les jours, les tâches, les graphiques et la projection réagissent au toucher.</div>
 
   <!-- ACCUEIL -->
   <section class="screen" id="s-accueil">
-    <h1>Bonjour Arthur</h1>
-    <div class="date">mercredi 18 novembre</div>
-    <div class="question">Qu'est-ce que tu as prévu aujourd'hui ?</div>
+    <div class="hello">
+      <h1>Bonjour Arthur</h1>
+      <div class="question">Qu'est-ce que tu as prévu aujourd'hui ?</div>
+    </div>
+    <div class="card glance">
+      <button data-go="journee"><span class="k">Prochain</span><span class="v">14:00</span><span class="s">Appel banque</span></button>
+      <button data-go="journee"><span class="k">Tâches</span><span class="v">3</span><span class="s">sur 4 restantes</span></button>
+      <button data-go="argent"><span class="k">Novembre</span><span class="v">+350 €</span><span class="s">mis de côté</span></button>
+    </div>
     <div class="field">
       <textarea id="ex-input" aria-label="Écris ou dicte à ton assistant" placeholder="Écris ou dicte ce que tu as en tête…"></textarea>
       <div class="tools">
@@ -145,10 +232,9 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
       <button><b>Planifier ma journée</b><span>Un ordre réaliste</span></button>
       <button><b>Bilan du jour</b><span>Fait, reporté, épargne</span></button>
     </div>
-
-    <div class="answer">
+    <div class="section">
       <div class="you">« Dentiste à 9 h 30, appeler la banque cet après-midi, et j'ai mis 50 € de côté pour le voyage. »</div>
-      <div class="card reply">
+      <div class="card pad reply">
         <p>C'est noté. Pour ta journée, je te propose :</p>
         <ul>
           <li>9 h 30 : dentiste. Pars vers 9 h 10.</li>
@@ -156,69 +242,80 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
           <li>14 h : appel à la banque, au calme après le déjeuner.</li>
         </ul>
         <p>Ton objectif voyage passe à 450 € sur 1 500 €.</p>
-        <div class="filed">
-          <span class="pill rdv">1 rendez-vous</span>
-          <span class="pill task">1 tâche</span>
-          <span class="pill save">+50 € épargne</span>
-        </div>
+        <div class="filed"><span class="pill rdv">1 rendez-vous</span><span class="pill task">1 tâche</span><span class="pill save">+50 € épargne</span></div>
       </div>
     </div>
   </section>
 
   <!-- MA JOURNÉE -->
   <section class="screen" id="s-journee" hidden>
-    <h1>Ma journée</h1>
-    <div class="date">mercredi 18 novembre</div>
+    <div class="hello"><div class="eyebrow">Semaine du 16 novembre</div><h1 id="day-title">Mercredi 18</h1></div>
+    <div class="card week" id="week" role="group" aria-label="Choisir un jour"></div>
 
     <div class="section">
-      <div class="sec-head"><h2>Rendez-vous</h2><small>2 aujourd'hui</small></div>
-      <div class="card agenda">
-        <div class="slot past"><time>09:30</time><div class="what">Dentiste<div class="where">Cabinet rue Victor-Hugo</div></div></div>
-        <div class="slot next"><time>14:00</time><div class="what"><div class="tag-now">Prochain</div>Appeler la banque<div class="where">Question sur le PEA</div></div></div>
-      </div>
+      <div class="sec-head"><h2>Programme</h2><small id="ev-count"></small></div>
+      <div class="card timeline" id="timeline"></div>
     </div>
 
     <div class="section">
-      <div class="sec-head"><h2>Tâches</h2><small class="num" id="task-count">1 / 4 faites</small></div>
-      <div class="card" id="tasks">
-        <button class="task done"><span class="box"></span><span class="t">Payer le loyer</span></button>
-        <button class="task"><span class="box"></span><span class="t">Déclaration mutuelle<div class="late">Reportée depuis lundi</div></span></button>
-        <button class="task"><span class="box"></span><span class="t">Faire les courses</span></button>
-        <button class="task"><span class="box"></span><span class="t">Répondre au mail de Julie</span></button>
-      </div>
-    </div>
-
-    <div class="section">
-      <h2>Prochains jours</h2>
-      <div class="card later">
-        <div class="row"><span>Jeu. 19 · 18:30</span><span>Sport avec Karim</span></div>
-        <div class="row"><span>Sam. 21 · 12:00</span><span>Déjeuner chez les parents</span></div>
-        <div class="row"><span>Lun. 23</span><span>Versement mensuel PEA (150 €)</span></div>
-      </div>
+      <div class="sec-head"><h2>Tâches</h2><small class="num" id="task-count"></small></div>
+      <div class="card" id="tasks"></div>
     </div>
   </section>
 
   <!-- MON ARGENT -->
   <section class="screen" id="s-argent" hidden>
-    <h1>Mon argent</h1>
-    <div class="date">au 18 novembre</div>
+    <div class="hello hero">
+      <div class="eyebrow">Épargne et placements</div>
+      <div class="big">5 230 €</div>
+      <div class="delta"><span class="up">+412 €</span> <span class="muted">en novembre · <span class="up">+2 830 €</span> en un an</span></div>
+    </div>
 
     <div class="section">
-      <div class="card total">
-        <span class="label">Épargne et placements</span>
-        <span class="big">5 230 €</span>
-        <div class="split"><span>Épargne <b class="num">1 650 €</b></span><span>Placements <b class="num">3 580 €</b></span></div>
+      <div class="sec-head"><h2>Évolution sur 12 mois</h2></div>
+      <div class="card pad">
+        <div class="legend"><span><i style="--c:var(--pea)"></i>Placements</span><span><i style="--c:var(--save)"></i>Épargne</span></div>
+        <div class="chart" id="evo"></div>
+        <button class="tblview" id="evo-tbl-btn" aria-expanded="false">Voir les chiffres</button>
+        <div id="evo-tbl" hidden style="overflow-x:auto"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Répartition</h2>
+      <div class="card pad donut-wrap">
+        <svg viewBox="0 0 132 132" id="donut" role="img" aria-label="Répartition : épargne 1 650 €, PEA 2 562 €, assurance-vie 1 018 €"></svg>
+        <div class="split-list" id="split"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="sec-head"><h2>Novembre</h2><small>12 jours restants</small></div>
+      <div class="card pad month" style="display:flex;flex-direction:column;gap:10px">
+        <div class="amt">350 € <small>/ 400 € prévus</small></div>
+        <div class="bar"><i style="width:87.5%;--c:var(--accent)"></i></div>
+        <div class="rows">
+          <div class="line"><span class="d">18 nov.</span><span><span class="pill save">Voyage</span></span><span class="a">+50 €</span></div>
+          <div class="line"><span class="d">5 nov.</span><span><span class="pill pea">PEA</span></span><span class="a">+150 €</span></div>
+          <div class="line"><span class="d">1 nov.</span><span><span class="pill save">Précaution</span></span><span class="a">+150 €</span></div>
+          <div class="line planned"><span class="d">30 nov.</span><span><span class="pill save">Voyage</span> <span class="muted" style="font-size:12.5px">prévu</span></span><span class="a">+50 €</span></div>
+        </div>
+        <div class="sub-h">Prochains versements</div>
+        <div class="rows">
+          <div class="line planned"><span class="d">1 déc.</span><span><span class="pill save">Précaution</span></span><span class="a">150 €</span></div>
+          <div class="line planned"><span class="d">5 déc.</span><span><span class="pill pea">PEA</span></span><span class="a">150 €</span></div>
+        </div>
       </div>
     </div>
 
     <div class="section">
       <div class="sec-head"><h2>Objectifs d'épargne</h2><small>2 en cours</small></div>
-      <div class="card goal">
+      <div class="card pad goal">
         <div class="top"><b>Épargne de précaution</b><span class="amt"><strong>1 200 €</strong> / 3 000 €</span></div>
         <div class="bar"><i style="width:40%"></i></div>
-        <div class="foot">40 % · à 150 € par mois, objectif atteint en février 2028</div>
+        <div class="foot">40 % · à 150 € par mois, atteint en février 2028</div>
       </div>
-      <div class="card goal">
+      <div class="card pad goal">
         <div class="top"><b>Voyage cet été</b><span class="amt"><strong>450 €</strong> / 1 500 €</span></div>
         <div class="bar"><i style="width:30%"></i></div>
         <div class="foot">30 % · il reste 1 050 € d'ici juin</div>
@@ -226,30 +323,40 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
     </div>
 
     <div class="section">
-      <div class="sec-head"><h2>Investissements</h2><small>valeurs saisies le 12 nov.</small></div>
-      <div class="card inv">
+      <div class="sec-head"><h2>Investissements</h2><small>valeurs du 12 nov.</small></div>
+      <div class="card pad inv">
         <div class="top">
-          <div><div class="name">PEA</div><div class="sub">ETF MSCI World · 150 € le 5 du mois</div></div>
+          <div><div class="name"><i style="--c:var(--pea)"></i>PEA</div><div class="sub">ETF MSCI World · 150 € le 5 du mois</div></div>
           <div class="val"><b>2 562 €</b><span class="up">+6,8 %</span></div>
         </div>
-        <div class="kv"><span>Total versé</span><span>2 400 €</span><span>Plus-value</span><span>+162 €</span></div>
+        <div class="kv"><span>Total versé</span><span>2 400 €</span><span>Plus-value</span><span class="up">+162 €</span></div>
       </div>
-      <div class="card inv">
+      <div class="card pad inv">
         <div class="top">
-          <div><div class="name">Assurance-vie</div><div class="sub">Fonds euros · pas de versement prévu</div></div>
+          <div><div class="name"><i style="--c:var(--av)"></i>Assurance-vie</div><div class="sub">Fonds euros · pas de versement prévu</div></div>
           <div class="val"><b>1 018 €</b><span class="up">+1,8 %</span></div>
         </div>
-        <div class="kv"><span>Total versé</span><span>1 000 €</span><span>Plus-value</span><span>+18 €</span></div>
+        <div class="kv"><span>Total versé</span><span>1 000 €</span><span>Plus-value</span><span class="up">+18 €</span></div>
       </div>
       <p class="note">Les cours ne se mettent pas à jour tout seuls. Donne la nouvelle valeur à l'assistant, par exemple « mon PEA vaut 2 600 € ».</p>
     </div>
 
     <div class="section">
-      <h2>Derniers mouvements</h2>
-      <div class="card ledger">
-        <div class="line"><span class="d">18 nov.</span><span class="l"><span class="pill save">Voyage</span></span><span class="a">+50 €</span></div>
-        <div class="line"><span class="d">5 nov.</span><span class="l"><span class="pill invest">PEA</span></span><span class="a">+150 €</span></div>
-        <div class="line"><span class="d">1 nov.</span><span class="l"><span class="pill save">Précaution</span></span><span class="a">+150 €</span></div>
+      <h2>Projection du PEA</h2>
+      <div class="card pad">
+        <div class="proj-out">
+          <span class="muted" id="proj-lead">Dans 10 ans, ton PEA pourrait valoir environ</span>
+          <span class="big" id="proj-val">—</span>
+          <span class="muted" style="font-size:13.5px" id="proj-sub"></span>
+        </div>
+        <div class="legend" style="margin-top:12px"><span><i class="ln" style="--c:var(--pea)"></i>Valeur estimée</span><span><i class="ln" style="--c:#9AA4B5"></i>Total versé</span></div>
+        <div class="chart" id="proj"></div>
+        <div class="ctrl"><label for="p-month">Versement mensuel <b id="p-month-v">150 €</b></label><input type="range" id="p-month" min="0" max="500" step="10" value="150"></div>
+        <div class="ctrl"><label for="p-years">Durée <b id="p-years-v">10 ans</b></label><input type="range" id="p-years" min="1" max="30" step="1" value="10"></div>
+        <div class="ctrl"><label>Rendement annuel supposé</label>
+          <div class="seg" id="p-rate"><button data-r="0.03" aria-pressed="false">Prudent 3 %</button><button data-r="0.05" aria-pressed="true">Moyen 5 %</button><button data-r="0.07" aria-pressed="false">Optimiste 7 %</button></div>
+        </div>
+        <p class="note" style="margin-top:12px">C'est une simulation, pas une promesse : la bourse monte et descend, et les rendements passés ne garantissent rien.</p>
       </div>
     </div>
   </section>
@@ -264,14 +371,198 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 </nav>
 
 <script>
-document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
-  document.querySelectorAll('.screen').forEach(s => s.hidden = s.id !== 's-' + t.dataset.s);
-  document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected', String(x === t)));
+(function(){
+const $ = s => document.querySelector(s);
+const NS = 'http://www.w3.org/2000/svg';
+const svgEl = (tag, attrs) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
+const eur = n => Math.round(n).toLocaleString('fr-FR').replace(/ | /g, ' ') + ' €';
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+/* ---------- Navigation ---------- */
+function go(s){
+  document.querySelectorAll('.screen').forEach(x => x.hidden = x.id !== 's-' + s);
+  document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected', String(x.dataset.s === s)));
   window.scrollTo(0, 0);
-}));
-const tasks = [...document.querySelectorAll('#tasks .task')];
-tasks.forEach(b => b.addEventListener('click', () => {
-  b.classList.toggle('done');
-  document.getElementById('task-count').textContent = tasks.filter(x => x.classList.contains('done')).length + ' / ' + tasks.length + ' faites';
-}));
+  if (s === 'argent') { drawEvo(); drawProj(); }
+}
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => go(t.dataset.s));
+document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => go(b.dataset.go));
+
+/* ---------- Ma journée ---------- */
+const WEEK = [
+  {dn:'Lun', dd:16, ev:[{s:'18:30', e:'19:30', t:'Sport', w:'Salle Basic-Fit'}], tasks:[['Payer le loyer',1],['Rappeler maman',1]]},
+  {dn:'Mar', dd:17, ev:[{s:'12:30', e:'13:30', t:'Déjeuner avec Léa', w:'Le Petit Zinc'}], tasks:[['Envoyer le dossier mutuelle',1]]},
+  {dn:'Mer', dd:18, today:true, ev:[
+    {s:'09:30', e:'10:15', t:'Dentiste', w:'Cabinet rue Victor-Hugo'},
+    {s:'14:00', e:'14:30', t:'Appeler la banque', w:'Question sur le PEA'},
+    {s:'19:00', e:'20:00', t:'Cours d\'anglais', w:'En visio'}],
+    tasks:[['Payer la facture d\'électricité',1],['Déclaration mutuelle',0,'Reportée depuis lundi'],['Faire les courses',0],['Répondre au mail de Julie',0]]},
+  {dn:'Jeu', dd:19, ev:[{s:'18:30', e:'19:30', t:'Sport avec Karim', w:'Salle Basic-Fit'}], tasks:[['Préparer la réunion de vendredi',0]]},
+  {dn:'Ven', dd:20, ev:[], tasks:[['Vérifier le virement de salaire',0]]},
+  {dn:'Sam', dd:21, ev:[{s:'12:00', e:'14:00', t:'Déjeuner chez les parents', w:'Apporter le dessert'}], tasks:[]},
+  {dn:'Dim', dd:22, ev:[], tasks:[['Préparer les repas de la semaine',0]]}
+];
+const FULL = {Lun:'Lundi', Mar:'Mardi', Mer:'Mercredi', Jeu:'Jeudi', Ven:'Vendredi', Sam:'Samedi', Dim:'Dimanche'};
+let sel = 2;
+const mins = s => { const [h,m] = s.split(':').map(Number); return h*60+m; };
+function renderWeek(){
+  const w = $('#week'); w.replaceChildren();
+  WEEK.forEach((d,i) => {
+    const b = document.createElement('button'); b.className = 'day' + (d.today ? ' today' : ''); b.setAttribute('aria-pressed', String(i===sel));
+    b.innerHTML = `<span class="dn">${d.dn}</span><span class="dd">${d.dd}</span><span class="dots">${'<i></i>'.repeat(Math.min(d.ev.length,3))}</span>`;
+    b.setAttribute('aria-label', `${FULL[d.dn]} ${d.dd}, ${d.ev.length} rendez-vous`);
+    b.onclick = () => { sel = i; renderDay(); };
+    w.append(b);
+  });
+}
+function renderDay(){
+  renderWeek();
+  const d = WEEK[sel];
+  $('#day-title').textContent = FULL[d.dn] + ' ' + d.dd + (d.today ? ' · aujourd\'hui' : '');
+  $('#ev-count').textContent = d.ev.length ? `${d.ev.length} rendez-vous` : '';
+  // frise 8 h -> 21 h
+  const START = 8*60, END = 21*60, PX = 1; // px par minute
+  const tl = $('#timeline'); tl.replaceChildren();
+  if (!d.ev.length) { tl.innerHTML = '<div class="empty">Aucun rendez-vous ce jour-là. Dis à l\'assistant « dentiste vendredi à 10 h » pour en ajouter un.</div>'; }
+  else {
+    const g = document.createElement('div'); g.className = 'tl-grid'; g.style.height = ((END-START)*PX + 8) + 'px'; g.style.marginTop = '10px';
+    for (let h = 8; h <= 21; h++) { const r = document.createElement('div'); r.className = 'hour'; r.style.top = ((h*60-START)*PX) + 'px'; r.innerHTML = `<span>${String(h).padStart(2,'0')}:00</span>`; g.append(r); }
+    const now = new Date(); let nm = now.getHours()*60 + now.getMinutes();
+    if (nm < START || nm > END) nm = 11*60+40; // heure d'exemple hors de la plage
+    d.ev.forEach(e => {
+      const a = mins(e.s), b = mins(e.e);
+      const el = document.createElement('div'); el.className = 'ev' + (d.today && b <= nm ? ' past' : sel < 2 ? ' past' : '');
+      el.style.top = ((a-START)*PX + 1) + 'px'; el.style.height = Math.max(44, (b-a)*PX - 2) + 'px';
+      el.innerHTML = `<b></b><small></small>`; el.querySelector('b').textContent = e.t; el.querySelector('small').textContent = `${e.s} – ${e.e} · ${e.w}`;
+      g.append(el);
+    });
+    if (d.today) { const n = document.createElement('div'); n.className = 'now'; n.style.top = ((nm-START)*PX) + 'px';
+      n.innerHTML = `<span>${String(Math.floor(nm/60)).padStart(2,'0')}:${String(nm%60).padStart(2,'0')}</span>`; g.append(n); }
+    tl.append(g);
+  }
+  renderTasks();
+}
+function renderTasks(){
+  const d = WEEK[sel], box = $('#tasks'); box.replaceChildren();
+  if (!d.tasks.length) box.innerHTML = '<div class="empty">Aucune tâche ce jour-là.</div>';
+  d.tasks.forEach((t,i) => {
+    const b = document.createElement('button'); b.className = 'task' + (t[1] ? ' done' : '');
+    b.innerHTML = `<span class="box"></span><span class="t"><span class="lbl"></span>${t[2] ? '<span class="late"></span>' : ''}</span>`;
+    b.querySelector('.lbl').textContent = t[0]; if (t[2]) b.querySelector('.late').textContent = t[2];
+    b.onclick = () => { t[1] = t[1] ? 0 : 1; b.classList.toggle('done'); count(); };
+    box.append(b);
+  });
+  count();
+}
+function count(){ const d = WEEK[sel]; $('#task-count').textContent = d.tasks.length ? `${d.tasks.filter(t=>t[1]).length} / ${d.tasks.length} faites` : ''; }
+renderDay();
+
+/* ---------- Graphique générique (aire empilée ou lignes) ---------- */
+function chart(host, {labels, series, stacked, fmtX, tipTitle}){
+  const W = 340, H = 170, L = 40, R = 8, T = 10, B = 24;
+  host.replaceChildren();
+  const n = labels.length;
+  const tops = labels.map((_,i) => stacked ? series.reduce((s,x)=>s+x.data[i],0) : Math.max(...series.map(x=>x.data[i])));
+  const rawMax = Math.max(...tops);
+  const step = niceStep(rawMax/4); const max = Math.ceil(rawMax/step)*step;
+  const x = i => L + (W-L-R) * (n===1 ? 0 : i/(n-1));
+  const y = v => T + (H-T-B) * (1 - v/max);
+  const svg = svgEl('svg', {viewBox:`0 0 ${W} ${H}`, role:'img', 'aria-label': series.map(s=>s.name).join(' et ') + ', ' + labels[0] + ' à ' + labels[n-1]});
+  for (let v = 0; v <= max + 1e-9; v += step) {
+    svg.append(svgEl('line', {x1:L, x2:W-R, y1:y(v), y2:y(v), stroke:css('--grid'), 'stroke-width':1}));
+    const t = svgEl('text', {x:L-6, y:y(v)+4, 'text-anchor':'end'}); t.textContent = v >= 10000 ? (v/1000)+'k' : v.toLocaleString('fr-FR'); svg.append(t);
+  }
+  const every = Math.ceil(n/6);
+  labels.forEach((lb,i) => { if (i % every && i !== n-1) return; const t = svgEl('text', {x:x(i), y:H-6, 'text-anchor': i===0?'start':i===n-1?'end':'middle'}); t.textContent = fmtX(lb,i); svg.append(t); });
+  let base = labels.map(()=>0);
+  const tipPts = [];
+  series.forEach(s => {
+    const top = s.data.map((v,i) => stacked ? base[i]+v : v);
+    const line = top.map((v,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('');
+    if (s.area) {
+      const back = base.map((v,i)=>[x(i),y(v)]).reverse().map(([a,b])=>`L${a.toFixed(1)},${b.toFixed(1)}`).join('');
+      svg.append(svgEl('path', {d: line + back + 'Z', fill:s.color, 'fill-opacity':0.12}));
+    }
+    svg.append(svgEl('path', {d:line, fill:'none', stroke:s.color, 'stroke-width':2, 'stroke-linejoin':'round', 'stroke-linecap':'round', 'stroke-dasharray': s.dash || 'none'}));
+    svg.append(svgEl('circle', {cx:x(n-1), cy:y(top[n-1]), r:4.5, fill:s.color, stroke:css('--surface'), 'stroke-width':2}));
+    tipPts.push(top);
+    if (stacked) base = top;
+  });
+  // couche de survol
+  const cross = svgEl('line', {y1:T, y2:H-B, stroke:css('--muted'), 'stroke-width':1, opacity:0});
+  svg.append(cross);
+  const dots = series.map(s => { const c = svgEl('circle', {r:4.5, fill:s.color, stroke:css('--surface'), 'stroke-width':2, opacity:0}); svg.append(c); return c; });
+  const hit = svgEl('rect', {x:L, y:0, width:W-L-R, height:H-B, fill:'transparent'}); svg.append(hit);
+  host.append(svg);
+  const tip = document.createElement('div'); tip.className = 'tip'; tip.hidden = true; host.append(tip);
+  const move = ev => {
+    const r = svg.getBoundingClientRect(); const px = (ev.clientX - r.left) * W / r.width;
+    const i = Math.max(0, Math.min(n-1, Math.round((px-L)/(W-L-R)*(n-1))));
+    cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i)); cross.setAttribute('opacity', .5);
+    dots.forEach((d,k) => { d.setAttribute('cx', x(i)); d.setAttribute('cy', y(tipPts[k][i])); d.setAttribute('opacity', 1); });
+    tip.innerHTML = `<b>${tipTitle(labels[i],i)}</b>` + series.map(s => `<div class="r"><span><i style="--c:${s.color}"></i>${s.name}</span><span>${eur(s.data[i])}</span></div>`).join('') + (stacked ? `<div class="r"><span>Total</span><span><b>${eur(tops[i])}</b></span></div>` : '');
+    tip.hidden = false;
+    const left = x(i) / W * r.width; tip.style.left = Math.min(Math.max(left, 80), r.width - 80) + 'px'; tip.style.top = (y(tops[i]) / H * r.height - 10) + 'px';
+  };
+  const leave = () => { tip.hidden = true; cross.setAttribute('opacity', 0); dots.forEach(d => d.setAttribute('opacity', 0)); };
+  hit.addEventListener('pointermove', move); hit.addEventListener('pointerdown', move); hit.addEventListener('pointerleave', leave);
+}
+function niceStep(raw){ const p = Math.pow(10, Math.floor(Math.log10(raw))); const m = raw/p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p; }
+
+/* ---------- Évolution 12 mois ---------- */
+const MONTHS = ['déc.','janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.'];
+const YEARS  = [2025,2026,2026,2026,2026,2026,2026,2026,2026,2026,2026,2026];
+const EPARGNE = [600,700,800,850,950,1050,1150,1200,1300,1400,1500,1650];
+const PLACEMENTS = [1800,1960,2080,2240,2360,2520,2700,2860,2980,3200,3420,3580];
+function drawEvo(){
+  chart($('#evo'), {labels:MONTHS, stacked:true, fmtX:(m)=>m, tipTitle:(m,i)=>m+' '+YEARS[i],
+    series:[{name:'Épargne', data:EPARGNE, color:css('--save'), area:true}, {name:'Placements', data:PLACEMENTS, color:css('--pea'), area:true}]});
+}
+$('#evo-tbl-btn').onclick = e => {
+  const t = $('#evo-tbl'); t.hidden = !t.hidden; e.target.setAttribute('aria-expanded', String(!t.hidden));
+  e.target.textContent = t.hidden ? 'Voir les chiffres' : 'Masquer les chiffres';
+  if (!t.hidden && !t.firstChild) t.innerHTML = '<table class="data"><tr><th>Mois</th><th>Épargne</th><th>Placements</th><th>Total</th></tr>' +
+    MONTHS.map((m,i)=>`<tr><td>${m} ${YEARS[i]}</td><td>${eur(EPARGNE[i])}</td><td>${eur(PLACEMENTS[i])}</td><td>${eur(EPARGNE[i]+PLACEMENTS[i])}</td></tr>`).join('') + '</table>';
+};
+
+/* ---------- Anneau ---------- */
+(function(){
+  const parts = [{n:'Épargne', a:1650, c:'--save', d:'Précaution et voyage'}, {n:'PEA', a:2562, c:'--pea', d:'ETF MSCI World'}, {n:'Assurance-vie', a:1018, c:'--av', d:'Fonds euros'}];
+  const total = parts.reduce((s,p)=>s+p.a,0);
+  const svg = $('#donut'), R = 52, C = 2*Math.PI*R, GAP = 3;
+  svg.append(svgEl('circle', {cx:66, cy:66, r:R, fill:'none', stroke:css('--grid'), 'stroke-width':16}));
+  let off = 0;
+  parts.forEach(p => {
+    const len = p.a/total*C;
+    svg.append(svgEl('circle', {class:'donut-seg', cx:66, cy:66, r:R, fill:'none', stroke:css(p.c), 'stroke-width':16,
+      'stroke-dasharray':`${Math.max(len-GAP,0)} ${C}`, 'stroke-dashoffset': -off, transform:'rotate(-90 66 66)'}));
+    off += len;
+  });
+  const t1 = svgEl('text', {x:66, y:63, 'text-anchor':'middle', style:`font:800 17px ${css('--display')};fill:${css('--ink')}`}); t1.textContent = '5 230 €';
+  const t2 = svgEl('text', {x:66, y:81, 'text-anchor':'middle', style:`font:12px ${css('--body')};fill:${css('--muted')}`}); t2.textContent = 'au total';
+  svg.append(t1, t2);
+  $('#split').innerHTML = parts.map(p => `<div class="it"><i style="--c:var(${p.c})"></i><span class="n">${p.n}</span><span class="a">${eur(p.a)}</span><span class="p">${Math.round(p.a/total*100)} % · ${p.d}</span></div>`).join('');
+})();
+
+/* ---------- Projection ---------- */
+let rate = 0.05;
+function drawProj(){
+  const m = +$('#p-month').value, yrs = +$('#p-years').value, start = 2562, startPaid = 2400;
+  $('#p-month-v').textContent = eur(m); $('#p-years-v').textContent = yrs + (yrs > 1 ? ' ans' : ' an');
+  const r = Math.pow(1+rate, 1/12) - 1;
+  const val = [start], paid = [startPaid], labels = [2026];
+  let v = start, p = startPaid;
+  for (let y = 1; y <= yrs; y++) { for (let k = 0; k < 12; k++) { v = v*(1+r) + m; p += m; } val.push(v); paid.push(p); labels.push(2026+y); }
+  $('#proj-lead').textContent = `Dans ${yrs} an${yrs>1?'s':''}, ton PEA pourrait valoir environ`;
+  $('#proj-val').textContent = eur(Math.round(v/10)*10);
+  $('#proj-sub').innerHTML = `dont <b style="color:var(--ink)">${eur(p)}</b> versés et <span class="up">${eur(Math.round((v-p)/10)*10)}</span> de gains estimés`;
+  chart($('#proj'), {labels, stacked:false, fmtX:(l)=>String(l), tipTitle:(l)=>'Fin '+l,
+    series:[{name:'Valeur estimée', data:val, color:css('--pea'), area:true}, {name:'Total versé', data:paid, color:'#9AA4B5', dash:'4 4'}]});
+}
+$('#p-month').oninput = drawProj; $('#p-years').oninput = drawProj;
+document.querySelectorAll('#p-rate button').forEach(b => b.onclick = () => {
+  rate = +b.dataset.r; document.querySelectorAll('#p-rate button').forEach(x => x.setAttribute('aria-pressed', String(x===b))); drawProj();
+});
+drawEvo(); drawProj();
+})();
 </script>
